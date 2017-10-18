@@ -2,6 +2,7 @@ package model
 
 import (
 	"reflect"
+	"strings"
 )
 
 type metaModel struct {
@@ -11,7 +12,12 @@ type metaModel struct {
 
 type metaField struct {
 	Name string
-	Tag  string
+	Tags []metaTag
+}
+
+type metaTag struct {
+	Name  string
+	Value string
 }
 
 func buildMetaModel(model interface{}) metaModel {
@@ -33,9 +39,28 @@ func getModelFields(model interface{}) []metaField {
 
 	for i := 0; i < val.NumField(); i++ {
 		field := val.Type().Field(i)
-		tag := field.Tag
-		fields = append(fields, metaField{field.Name, tag.Get("model")})
+		tag := field.Tag.Get("model")
+		fields = append(fields, metaField{field.Name, parseTag(tag)})
 	}
 
 	return fields
+}
+
+func parseTag(tag string) []metaTag {
+	tags := make([]metaTag, 0)
+	elements := strings.Split(tag, ";")
+
+	for _, e := range elements {
+		nv := strings.Split(e, ":")
+
+		if len(nv) == 1 {
+			tags = append(tags, metaTag{"", nv[0]})
+		} else if len(nv) == 2 {
+			tags = append(tags, metaTag{nv[0], nv[1]})
+		} else {
+			panic("Too many or too few meta field tag separators")
+		}
+	}
+
+	return tags
 }
