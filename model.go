@@ -26,7 +26,19 @@ func buildMetaModel(model interface{}) metaModel {
 }
 
 func getModelName(model interface{}) string {
-	if t := reflect.TypeOf(model); t.Kind() == reflect.Ptr {
+	t := reflect.TypeOf(model)
+	kind := t.Kind()
+
+	if kind == reflect.Ptr {
+		t = t.Elem()
+		kind = t.Kind()
+	}
+
+	if kind != reflect.Struct {
+		panic("Passed type is not a struct")
+	}
+
+	if t.Kind() == reflect.Ptr {
 		return t.Elem().Name()
 	} else {
 		return t.Name()
@@ -40,6 +52,16 @@ func getModelFields(model interface{}) []metaField {
 	for i := 0; i < val.NumField(); i++ {
 		field := val.Type().Field(i)
 		tag := field.Tag.Get("model")
+		kind := field.Type.Kind()
+
+		if tag == "" || tag == "-" {
+			continue
+		}
+
+		if kind == reflect.Struct || kind == reflect.Ptr || kind == reflect.Interface {
+			panic("The type for field '" + field.Name + "' is invalid")
+		}
+
 		fields = append(fields, metaField{field.Name, parseTag(tag)})
 	}
 

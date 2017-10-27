@@ -5,9 +5,18 @@ import (
 )
 
 type testModel struct {
-	Id   uint64 `model:"type:integer;primary_key;notnull"`
-	Name string `model:"type:varchar;unique"`
-	Age  int    `model:"type:integer;notnull"`
+	Id    uint64 `model:"type:integer;primary_key;notnull;;"`
+	Name  string `model:"type:varchar;unique"`
+	Age   int    `model:"type:integer;notnull"`
+	Array []int  `model:"type:integer[]"`
+}
+
+type testInvalidTypesModel struct {
+	Ignored          bool `model:"-"`
+	IgnoredToo       bool
+	Unknown          struct{ Name string } `model:"type:struct"`
+	UnknownToo       *int                  `model:"type:integer"`
+	UnknownInterface interface{}           `model:"type:interface"`
 }
 
 func TestBuildMetaModel(t *testing.T) {
@@ -32,14 +41,29 @@ func TestGetModelName(t *testing.T) {
 	}
 }
 
+func TestGetModelNameStructOnly(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("Calling getModelName with invalid type must panic")
+		}
+	}()
+
+	val := 42
+	getModelName(val)
+	getModelName(&val)
+}
+
 func TestGetModelFields(t *testing.T) {
 	fields := getModelFields(&testModel{})
 
-	if len(fields) != 3 {
-		t.Fatal("All fields must be returned")
+	if len(fields) != 4 {
+		t.Fatalf("All fields must be returned: %v", len(fields))
 	}
 
-	if fields[0].Name != "Id" || fields[1].Name != "Name" || fields[2].Name != "Age" {
+	if fields[0].Name != "Id" ||
+		fields[1].Name != "Name" ||
+		fields[2].Name != "Age" ||
+		fields[3].Name != "Array" {
 		t.Fatal("Field names must be correct")
 	}
 }
