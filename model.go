@@ -5,23 +5,26 @@ import (
 	"strings"
 )
 
-type metaModel struct {
+// A meta model is the description of a model type for translators.
+type MetaModel struct {
 	ModelName string
-	Fields    []metaField
+	Fields    []MetaField
 }
 
-type metaField struct {
+// A meta field is the description of one field of a model type for translation.
+type MetaField struct {
 	Name string
-	Tags []metaTag
+	Tags []MetaTag
 }
 
-type metaTag struct {
+// A meta tag is the description of a tag for a model field.
+type MetaTag struct {
 	Name  string
 	Value string
 }
 
-func buildMetaModel(model interface{}) metaModel {
-	return metaModel{getModelName(model),
+func buildMetaModel(model interface{}) MetaModel {
+	return MetaModel{getModelName(model),
 		getModelFields(model)}
 }
 
@@ -45,9 +48,14 @@ func getModelName(model interface{}) string {
 	}
 }
 
-func getModelFields(model interface{}) []metaField {
-	val := reflect.ValueOf(model).Elem()
-	fields := make([]metaField, 0)
+func getModelFields(model interface{}) []MetaField {
+	val := reflect.ValueOf(model)
+
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+
+	fields := make([]MetaField, 0)
 
 	for i := 0; i < val.NumField(); i++ {
 		field := val.Type().Field(i)
@@ -62,23 +70,23 @@ func getModelFields(model interface{}) []metaField {
 			panic("The type for field '" + field.Name + "' is invalid")
 		}
 
-		fields = append(fields, metaField{field.Name, parseTag(tag)})
+		fields = append(fields, MetaField{field.Name, parseTag(tag)})
 	}
 
 	return fields
 }
 
-func parseTag(tag string) []metaTag {
-	tags := make([]metaTag, 0)
+func parseTag(tag string) []MetaTag {
+	tags := make([]MetaTag, 0)
 	elements := strings.Split(tag, ";")
 
 	for _, e := range elements {
 		nv := strings.Split(e, ":")
 
 		if len(nv) == 1 {
-			tags = append(tags, metaTag{"", nv[0]})
+			tags = append(tags, MetaTag{"", nv[0]})
 		} else if len(nv) == 2 {
-			tags = append(tags, metaTag{nv[0], nv[1]})
+			tags = append(tags, MetaTag{nv[0], nv[1]})
 		} else {
 			panic("Too many or too few meta field tag separators")
 		}

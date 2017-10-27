@@ -5,7 +5,7 @@ import (
 )
 
 type testModel struct {
-	Id    uint64 `model:"type:integer;primary_key;notnull;;"`
+	Id    uint64 `model:"type:integer;primarykey;notnull;;"` // accept multiple ;
 	Name  string `model:"type:varchar;unique"`
 	Age   int    `model:"type:integer;notnull"`
 	Array []int  `model:"type:integer[]"`
@@ -66,17 +66,23 @@ func TestGetModelFields(t *testing.T) {
 		fields[3].Name != "Array" {
 		t.Fatal("Field names must be correct")
 	}
+
+	fields = getModelFields(testModel{})
+
+	if len(fields) != 4 {
+		t.Fatalf("All fields must be returned: %v", len(fields))
+	}
 }
 
 func TestParseTag(t *testing.T) {
-	tags := parseTag("type:varchar(20);primary_key;notnull")
+	tags := parseTag("type:varchar(20);primarykey;notnull")
 
 	if len(tags) != 3 {
 		t.Fatal("All elements must be returned")
 	}
 
 	if tags[0].Name != "type" || tags[0].Value != "varchar(20)" ||
-		tags[1].Name != "" || tags[1].Value != "primary_key" ||
+		tags[1].Name != "" || tags[1].Value != "primarykey" ||
 		tags[2].Name != "" || tags[2].Value != "notnull" {
 		t.Fatal("Tag elements must be correct")
 	}
