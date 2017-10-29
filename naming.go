@@ -5,20 +5,31 @@ import (
 )
 
 func toSnakeCase(name string) string {
-	snake, upper, wasUpper := "", false, false
-
-	for _, c := range name {
-		upper = unicode.IsUpper(c)
-		c = unicode.ToLower(c)
-
-		if upper != wasUpper {
-			snake += "_" + string(c)
-		} else {
-			snake += string(c)
-		}
-
-		wasUpper = upper
+	if len(name) == 0 {
+		return ""
 	}
 
-	return snake
+	runes := []rune(name)
+	snake := make([]rune, 0)
+	isLower := func(i int) bool {
+		return i < len(runes) && unicode.IsLower(runes[i])
+	}
+
+	for i, c := range runes {
+		if unicode.IsUpper(runes[i]) {
+			c = unicode.ToLower(c)
+
+			if i > 0 && runes[i-1] != '_' && (isLower(i-1) || isLower(i+1)) {
+				snake = append(snake, '_')
+			}
+		}
+
+		if unicode.IsSpace(c) {
+			snake = append(snake, '_')
+		} else {
+			snake = append(snake, c)
+		}
+	}
+
+	return string(snake)
 }
