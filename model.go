@@ -1,8 +1,12 @@
-package model
+package gondolier
 
 import (
 	"reflect"
 	"strings"
+)
+
+const (
+	tag_name = "gondolier"
 )
 
 // A meta model is the description of a model type for translators.
@@ -59,7 +63,7 @@ func getModelFields(model interface{}) []MetaField {
 
 	for i := 0; i < val.NumField(); i++ {
 		field := val.Type().Field(i)
-		tag := field.Tag.Get("model")
+		tag := field.Tag.Get(tag_name)
 		kind := field.Type.Kind()
 
 		if tag == "" || tag == "-" {

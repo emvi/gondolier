@@ -1,49 +1,38 @@
-package model
+package gondolier
 
 import (
 	"testing"
 )
 
 type testModelA struct {
-	Id   uint64 `model:"type:bigint;primarykey;notnull"`
-	Name string `model:"type:character varying(100)"`
-	B    uint64 `model:"type:bigint;fk(testModelB)"`
+	Id   uint64 `gondolier:"type:bigint;primarykey;notnull"`
+	Name string `gondolier:"type:character varying(100)"`
+	B    uint64 `gondolier:"type:bigint;fk(testModelB)"`
 }
 
 type testModelB struct {
-	Id  uint64 `model:"type:bigint;primarykey;notnull"`
-	Age uint   `model:"type:integer"`
+	Id  uint64 `gondolier:"type:bigint;primarykey;notnull"`
+	Age uint   `gondolier:"type:integer"`
 }
 
-type dummyTranslator struct {
+type dummyMigrator struct {
 	models []MetaModel
 }
 
-func (t *dummyTranslator) Translate(metaModels []MetaModel) string {
+func (t *dummyMigrator) Migrate(metaModels []MetaModel) {
 	t.models = metaModels
-	return ""
 }
 
 func TestUse(t *testing.T) {
-	if translator != nil {
-		t.Fatal("No translator must be selected")
+	if migrator != nil {
+		t.Fatal("No migrator must be selected")
 	}
 
-	Use("Postgres")
+	Use(&Postgres{})
 
-	if translator == nil {
+	if migrator == nil {
 		t.Fatal("Postgres must be selected")
 	}
-}
-
-func TestUseUnknownDb(t *testing.T) {
-	defer func() {
-		if e := recover(); e == nil {
-			t.Fatal("Calling Use with unknown database must panic")
-		}
-	}()
-
-	Use("unknown")
 }
 
 func TestModel(t *testing.T) {
@@ -55,8 +44,8 @@ func TestModel(t *testing.T) {
 }
 
 func TestMigrate(t *testing.T) {
-	dummy := &dummyTranslator{}
-	translator = dummy
+	dummy := &dummyMigrator{}
+	migrator = dummy
 	Model(testModelA{}, testModelB{})
 	Migrate()
 
@@ -65,12 +54,12 @@ func TestMigrate(t *testing.T) {
 	}
 }
 
-func TestMigrateNoTranslator(t *testing.T) {
-	translator = nil
+func TestMigrateNomigrator(t *testing.T) {
+	migrator = nil
 
 	defer func() {
 		if r := recover(); r == nil {
-			t.Fatal("Migrate must panic if no translator was selected")
+			t.Fatal("Migrate must panic if no migrator was selected")
 		}
 	}()
 

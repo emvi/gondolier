@@ -1,7 +1,7 @@
-package model
+package gondolier
 
-type postgresTranslator struct{}
+type Postgres struct{}
 
-func (t *postgresTranslator) Translate(metaModels []MetaModel) string {
-	return ""
+func (t *Postgres) Migrate(metaModels []MetaModel) {
+
 }

@@ -1,34 +1,21 @@
-package model
+package gondolier
 
 import (
 	"strings"
 )
 
-const (
-	Postgres = "postgres"
-)
-
 var (
-	translator Translator // no default
+	migrator   Migrator // no default
 	metaModels = make([]MetaModel, 0)
 )
 
-// A translator translates the meta model into executable SQL statements in right order.
-type Translator interface {
-	// Translate takes the meta model and translates it to executable SQL statements,
-	// which are returned as one string.
-	Translate([]MetaModel) string
+type Migrator interface {
+	Migrate([]MetaModel)
 }
 
-// Sets the database type used for migration.
-func Use(db string) {
-	db = strings.ToLower(db)
-
-	if db == Postgres {
-		translator = &postgresTranslator{}
-	} else {
-		panic("The database '" + db + "' is not supported")
-	}
+// Sets the database migrator used for migration.
+func Use(m Migrator) {
+	migrator = m
 }
 
 // Adds one or more models for migration. Can be passed as references to a structs or the structs directly or mixed.
@@ -42,13 +29,13 @@ func Model(models ...interface{}) {
 	}
 }
 
-// Migrates models added previously.
+// Migrates models added previously using Model().
 func Migrate() {
-	if translator == nil {
-		panic("No translator was selected, call Use(database) to select a translator")
+	if migrator == nil {
+		panic("No migrator was set, call Use(migrator) to select one")
 	}
 
-	translator.Translate(metaModels)
+	migrator.Migrate(metaModels)
 	reset()
 }
 

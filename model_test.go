@@ -1,22 +1,22 @@
-package model
+package gondolier
 
 import (
 	"testing"
 )
 
 type testModel struct {
-	Id    uint64 `model:"type:integer;primarykey;notnull;;"` // accept multiple ;
-	Name  string `model:"type:varchar;unique"`
-	Age   int    `model:"type:integer;notnull"`
-	Array []int  `model:"type:integer[]"`
+	Id    uint64 `gondolier:"type:integer;primarykey;notnull;;"` // accept multiple ;
+	Name  string `gondolier:"type:varchar;unique"`
+	Age   int    `gondolier:"type:integer;notnull"`
+	Array []int  `gondolier:"type:integer[]"`
 }
 
 type testInvalidTypesModel struct {
-	Ignored          bool `model:"-"`
+	Ignored          bool `gondolier:"-"`
 	IgnoredToo       bool
-	Unknown          struct{ Name string } `model:"type:struct"`
-	UnknownToo       *int                  `model:"type:integer"`
-	UnknownInterface interface{}           `model:"type:interface"`
+	Unknown          struct{ Name string } `gondolier:"type:struct"`
+	UnknownToo       *int                  `gondolier:"type:integer"`
+	UnknownInterface interface{}           `gondolier:"type:interface"`
 }
 
 func TestBuildMetaModel(t *testing.T) {
