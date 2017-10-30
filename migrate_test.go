@@ -17,10 +17,15 @@ type testModelB struct {
 
 type dummyMigrator struct {
 	models []MetaModel
+	drop   []string
 }
 
-func (t *dummyMigrator) Migrate(metaModels []MetaModel) {
-	t.models = metaModels
+func (m *dummyMigrator) Migrate(metaModels []MetaModel) {
+	m.models = metaModels
+}
+
+func (m *dummyMigrator) DropTable(name string) {
+	m.drop = append(m.drop, name)
 }
 
 func TestUse(t *testing.T) {
@@ -45,7 +50,7 @@ func TestModel(t *testing.T) {
 
 func TestMigrate(t *testing.T) {
 	dummy := &dummyMigrator{}
-	migrator = dummy
+	Use(dummy)
 	Model(testModelA{}, testModelB{})
 	Migrate()
 
@@ -54,7 +59,7 @@ func TestMigrate(t *testing.T) {
 	}
 }
 
-func TestMigrateNomigrator(t *testing.T) {
+func TestMigrateNoMigrator(t *testing.T) {
 	migrator = nil
 
 	defer func() {
@@ -64,4 +69,18 @@ func TestMigrateNomigrator(t *testing.T) {
 	}()
 
 	Migrate()
+}
+
+func TestDrop(t *testing.T) {
+	dummy := &dummyMigrator{}
+	Use(dummy)
+	Drop(testModelA{}, testModelB{})
+
+	if len(dummy.drop) != 2 {
+		t.Fatal("Two models must have been dropped")
+	}
+
+	if dummy.drop[0] != "testModelA" || dummy.drop[1] != "testModelB" {
+		t.Fatalf("Two tables must have been dropped, but was %v %v", dummy.drop[0], dummy.drop[1])
+	}
 }

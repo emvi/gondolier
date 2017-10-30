@@ -9,13 +9,13 @@ const (
 	tag_name = "gondolier"
 )
 
-// A meta model is the description of a model type for translators.
+// A meta model is the description of a model for migration.
 type MetaModel struct {
 	ModelName string
 	Fields    []MetaField
 }
 
-// A meta field is the description of one field of a model type for translation.
+// A meta field is the description of one field of a model for migration.
 type MetaField struct {
 	Name string
 	Tags []MetaTag
