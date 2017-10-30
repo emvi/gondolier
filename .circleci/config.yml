@@ -4,7 +4,8 @@ jobs:
     docker:
       - image: golang
         environment:
-          - PGHOST=127.0.0.1
+          - PG_HOST=localhost
+          - PG_USER=postgres
       - image: postgres
         environment:
           - POSTGRES_USER=postgres
