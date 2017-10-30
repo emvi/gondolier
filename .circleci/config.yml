@@ -3,6 +3,8 @@ jobs:
   build:
     docker:
       - image: golang
+        environment:
+          - PGHOST=127.0.0.1
       - image: postgres
         environment:
           - POSTGRES_USER=postgres
