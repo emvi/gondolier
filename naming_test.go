@@ -19,9 +19,10 @@ func TestToSnakeCase(t *testing.T) {
 		[]string{"MYSnake_case", "my_snake_case"},
 		[]string{"WOOFWoof", "woof_woof"},
 		[]string{"Space to underscore", "space_to_underscore"}}
+	namesake := SnakeCase{}
 
 	for _, name := range names {
-		got := toSnakeCase(name[0])
+		got := namesake.Get(name[0])
 
 		if got != name[1] {
 			t.Fatalf("Expected snake case name %v but got %v for input %v", name[1], got, name[0])

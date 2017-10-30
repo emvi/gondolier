@@ -1,6 +1,7 @@
 package gondolier
 
 import (
+	"database/sql"
 	"testing"
 )
 
@@ -20,12 +21,18 @@ type dummyMigrator struct {
 	drop   []string
 }
 
-func (m *dummyMigrator) Migrate(metaModels []MetaModel) {
+func (m *dummyMigrator) Migrate(tx *sql.Tx, metaModels []MetaModel) {
 	m.models = metaModels
 }
 
-func (m *dummyMigrator) DropTable(name string) {
+func (m *dummyMigrator) DropTable(tx *sql.Tx, name string) {
 	m.drop = append(m.drop, name)
+}
+
+type dummyCase struct{}
+
+func (n *dummyCase) Get(name string) string {
+	return "works"
 }
 
 func TestUse(t *testing.T) {
@@ -33,11 +40,29 @@ func TestUse(t *testing.T) {
 		t.Fatal("No migrator must be selected")
 	}
 
-	Use(&Postgres{})
+	Use(testdb, &Postgres{})
 
 	if migrator == nil {
 		t.Fatal("Postgres must be selected")
 	}
+}
+
+func testNaming(t *testing.T) {
+	Naming(&dummyCase{})
+
+	if naming.Get("") != "works" {
+		t.Fatal("Name schema must have been set")
+	}
+}
+
+func TestNamingNotNil(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("Naming must panic if nil was passed")
+		}
+	}()
+
+	Naming(nil)
 }
 
 func TestModel(t *testing.T) {
@@ -50,7 +75,7 @@ func TestModel(t *testing.T) {
 
 func TestMigrate(t *testing.T) {
 	dummy := &dummyMigrator{}
-	Use(dummy)
+	Use(testdb, dummy)
 	Model(testModelA{}, testModelB{})
 	Migrate()
 
@@ -73,7 +98,7 @@ func TestMigrateNoMigrator(t *testing.T) {
 
 func TestDrop(t *testing.T) {
 	dummy := &dummyMigrator{}
-	Use(dummy)
+	Use(testdb, dummy)
 	Drop(testModelA{}, testModelB{})
 
 	if len(dummy.drop) != 2 {

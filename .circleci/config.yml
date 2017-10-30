@@ -3,6 +3,11 @@ jobs:
   build:
     docker:
       - image: golang
+      - image: postgres
+        environment:
+          - POSTGRES_USER=postgres
+          - POSTGRES_PASSWORD=postgres
+          - POSTGRES_DB=gondolier
     working_directory: /go/src/github.com/DeKugelschieber/gondolier
     steps:
       - checkout

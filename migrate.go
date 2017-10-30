@@ -1,22 +1,40 @@
 package gondolier
 
 import (
+	"database/sql"
 	"strings"
 )
 
 var (
-	migrator   Migrator // no default
+	db         *sql.DB
+	migrator   Migrator
+	naming     = NameSchema(&SnakeCase{})
 	metaModels = make([]MetaModel, 0)
 )
 
 type Migrator interface {
-	Migrate([]MetaModel)
-	DropTable(string)
+	Migrate(*sql.Tx, []MetaModel)
+	DropTable(*sql.Tx, string)
 }
 
-// Sets the database migrator used for migration.
-func Use(m Migrator) {
+type NameSchema interface {
+	Get(string) string
+}
+
+// Sets the database connection and migrator used for migration.
+func Use(conn *sql.DB, m Migrator) {
+	db = conn
 	migrator = m
+}
+
+// Sets the naming used for migration. Default is snake case.
+// Example: Naming(SnakeCase)
+func Naming(schema NameSchema) {
+	if schema == nil {
+		panic("Name schema must not be nil")
+	}
+
+	naming = schema
 }
 
 // Adds one or more models for migration.
@@ -31,29 +49,38 @@ func Model(models ...interface{}) {
 	}
 }
 
-// Migrates models added previously using Model(). The migrator must be set before.
+// Migrates models added previously using Model().
+// The database connection and migrator must be set.
 // Example:
 //
 // Use(Postgres)
 // Model(MyModel{}, AnotherModel{})
 // Migrate()
 func Migrate() {
-	migratorSet()
-	migrator.Migrate(metaModels)
+	checkSetup()
+	tx := begin()
+	defer rollback(tx)
+	migrator.Migrate(tx, metaModels)
 	reset()
+	commit(tx)
 }
 
-// Drops tables for given models if exists. The migrator must be set before.
+// Drops tables for given models if exists.
+// The database connection and migrator must be set.
 // Can be passed as references to a structs or the structs directly or mixed.
-// This function might panic if an invalid model is passed.
+// This function might panic if an invalid model is passed or the tables cannot be dropped.
 // Example: Drop(&MyModel{}, AnotherModel{})
 func Drop(models ...interface{}) {
-	migratorSet()
+	checkSetup()
+	tx := begin()
+	defer rollback(tx)
 
 	for _, model := range models {
 		metaModel := buildMetaModel(model)
-		migrator.DropTable(metaModel.ModelName)
+		migrator.DropTable(tx, metaModel.ModelName)
 	}
+
+	commit(tx)
 }
 
 func modelExists(model interface{}) bool {
@@ -68,9 +95,41 @@ func modelExists(model interface{}) bool {
 	return false
 }
 
-func migratorSet() {
+func checkSetup() {
+	if db == nil {
+		panic("No database connection was set, call Use(connection, migrator) to set one")
+	}
+
 	if migrator == nil {
-		panic("No migrator was set, call Use(migrator) to select one")
+		panic("No migrator was set, call Use(connection, migrator) to select one")
+	}
+
+	if naming == nil {
+		panic("No naming was set, call Naming(naming) to set one")
+	}
+}
+
+func begin() *sql.Tx {
+	tx, err := db.Begin()
+
+	if err != nil {
+		panic(err)
+	}
+
+	return tx
+}
+
+func rollback(tx *sql.Tx) {
+	if r := recover(); r != nil {
+		if err := tx.Rollback(); err != nil {
+			panic(err)
+		}
+	}
+}
+
+func commit(tx *sql.Tx) {
+	if err := tx.Commit(); err != nil {
+		panic(err)
 	}
 }
 

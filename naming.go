@@ -4,7 +4,9 @@ import (
 	"unicode"
 )
 
-func toSnakeCase(name string) string {
+type SnakeCase struct{}
+
+func (n *SnakeCase) Get(name string) string {
 	if len(name) == 0 {
 		return ""
 	}
