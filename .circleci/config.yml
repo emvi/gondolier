@@ -11,4 +11,5 @@ jobs:
     working_directory: /go/src/github.com/DeKugelschieber/gondolier
     steps:
       - checkout
+      - run: go get github.com/lib/pq
       - run: go test .
