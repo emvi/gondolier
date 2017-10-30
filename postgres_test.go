@@ -5,29 +5,43 @@ import (
 )
 
 type testUser struct {
-	Id      uint64 `gondolier:"type:bigint;pk;notnull"`
-	Name    string `gondolier:"type:character varying(255);notnull"`
-	Age     uint   `gondolier:"type:integer";notnull`
+	Id      uint64 `gondolier:"type:bigint;pk;seq:1,1,-,-,1;default:nextval(seq);notnull"`
+	Name    string `gondolier:"type:character varying(255);notnull;unique"`
+	Age     uint   `gondolier:"type:integer;notnull"`
 	Picture uint64 `gondolier:"type:bigint;fk:testPicture;null"`
 }
 
 type testPicture struct {
-	Id       uint64 `gondolier:"type:bigint;pk;notnull"`
+	Id       uint64 `gondolier:"type:bigint;pk;id;notnull"`
 	FileName string `gondolier:"type:character varying(255);notnull"`
 }
 
 type testPost struct {
-	Id      uint64 `gondolier:"type:bigint;pk;notnull"`
+	Id      uint64 `gondolier:"type:bigint;pk;id;notnull"`
 	Post    string `gondolier:"type:character varying(255);notnull"`
 	User    uint64 `gondolier:"type:bigint;fk:testUser;notnull"`
 	Picture uint64 `gondolier:"type:bigint;fk:testPicture;null"`
 }
 
-/*func TestPostgresMigrator(t *testing.T) {
-	Use(testdb, &Postgres{})
-	Model(testUser{}, testPicture{}, testPost{})
+func TestPostgresCreateTable(t *testing.T) {
+	testCleanDb()
+	postgres := NewPostgres("public")
+	Use(testdb, postgres)
+	Model(testUser{}, testPost{}, testPicture{})
 	Migrate()
-}*/
+
+	if !postgres.tableExists("test_post") {
+		t.Fatal("Table must have been created: test_post")
+	}
+
+	if !postgres.tableExists("test_user") {
+		t.Fatal("Table must have been created: test_user")
+	}
+
+	if !postgres.tableExists("test_picture") {
+		t.Fatal("Table must have been created: test_picture")
+	}
+}
 
 func TestPostgresDropTable(t *testing.T) {
 	testCleanDb()
@@ -36,52 +50,31 @@ func TestPostgresDropTable(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	Use(testdb, &Postgres{})
+	postgres := NewPostgres("public")
+	Use(testdb, postgres)
 	Drop(testUser{})
 
-	rows, err := testdb.Query(`SELECT EXISTS (SELECT 1
-	   FROM information_schema.tables 
-	   WHERE table_schema = 'public'
-	   AND table_name = 'test_user')`)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var exists bool
-	rows.Next()
-	rows.Scan(&exists)
-
-	if exists {
+	if postgres.tableExists("test_user") {
 		t.Fatal("Table must have been dropped")
 	}
 }
 
 func TestPostgresDropTableNotExists(t *testing.T) {
 	testCleanDb()
-	Use(testdb, &Postgres{})
+	postgres := NewPostgres("public")
+	Use(testdb, postgres)
 	Drop(testUser{})
 
-	rows, err := testdb.Query(`SELECT EXISTS (SELECT 1
-	   FROM information_schema.tables 
-	   WHERE table_schema = 'public'
-	   AND table_name = 'test_user')`)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var exists bool
-	rows.Next()
-	rows.Scan(&exists)
-
-	if exists {
+	if postgres.tableExists("test_user") {
 		t.Fatal("Table must have been dropped")
 	}
 }
 
 func testCleanDb() {
-	testdb.Exec(`DROP TABLE "test_post"`)
-	testdb.Exec(`DROP TABLE "test_user"`)
-	testdb.Exec(`DROP TABLE "test_picture"`)
+	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_post_id_seq"`)
+	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_user_id_seq"`)
+	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_picture_id_seq"`)
+	testdb.Exec(`DROP TABLE IF EXISTS "test_post"`)
+	testdb.Exec(`DROP TABLE IF EXISTS "test_user"`)
+	testdb.Exec(`DROP TABLE IF EXISTS "test_picture"`)
 }
