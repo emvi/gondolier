@@ -8,7 +8,7 @@ type testUser struct {
 	Id      uint64 `gondolier:"type:bigint;pk;seq:1,1,-,-,1;default:nextval(seq);notnull"`
 	Name    string `gondolier:"type:character varying(255);notnull;unique"`
 	Age     uint   `gondolier:"type:integer;notnull"`
-	Picture uint64 `gondolier:"type:bigint;fk:testPicture;null"`
+	Picture uint64 `gondolier:"type:bigint;fk:testPicture.Id;null"`
 }
 
 type testPicture struct {
@@ -19,8 +19,8 @@ type testPicture struct {
 type testPost struct {
 	Id      uint64 `gondolier:"type:bigint;pk;id;notnull"`
 	Post    string `gondolier:"type:character varying(255);notnull"`
-	User    uint64 `gondolier:"type:bigint;fk:testUser;notnull"`
-	Picture uint64 `gondolier:"type:bigint;fk:testPicture;null"`
+	User    uint64 `gondolier:"type:bigint;fk:testUser.Id;notnull"`
+	Picture uint64 `gondolier:"type:bigint;fk:testPicture.Id;null"`
 }
 
 func TestPostgresCreateTable(t *testing.T) {
@@ -40,6 +40,30 @@ func TestPostgresCreateTable(t *testing.T) {
 
 	if !postgres.tableExists("test_picture") {
 		t.Fatal("Table must have been created: test_picture")
+	}
+
+	if !postgres.sequenceExists("test_post_id_seq") {
+		t.Fatal("Sequence must have been created: test_post_id_seq")
+	}
+
+	if !postgres.sequenceExists("test_user_id_seq") {
+		t.Fatal("Sequence must have been created: test_user_id_seq")
+	}
+
+	if !postgres.sequenceExists("test_picture_id_seq") {
+		t.Fatal("Sequence must have been created: test_picture_id_seq")
+	}
+
+	if !postgres.foreignKeyExists("test_user", "test_user_test_picture_fk") {
+		t.Fatal("Foreign key must have been created: test_user_test_picture_fk")
+	}
+
+	if !postgres.foreignKeyExists("test_post", "test_post_test_user_fk") {
+		t.Fatal("Foreign key must have been created: test_post_test_user_fk")
+	}
+
+	if !postgres.foreignKeyExists("test_post", "test_post_test_picture_fk") {
+		t.Fatal("Foreign key must have been created: test_post_test_picture_fk")
 	}
 }
 
