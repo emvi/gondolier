@@ -14,9 +14,13 @@
 * more docs
 * package docs
 * add postgres migrator
-* how to change table/column/sequence/... names? is it supported?
+* how to change table/column/sequence/... names? should it be supported?
 
-Gondolier is a library to auto migrate database schemas for Go.
+Gondolier is a library to auto migrate database schemas for Go using structs. Quick demo:
+
+```
+// WIP
+```
 
 ## Features
 
@@ -36,7 +40,7 @@ Gondolier is a library to auto migrate database schemas for Go.
 
 ### Execute tests
 
-To execute the tests, you need to have all supported databases installed (for integration tests). The tests can then be executed by running the *run_tests* script or by executing the steps inside manually. All tests must be passed before a pull request can be opened. New code must be tested and keep the test coverage at least above 80%.
+To execute the tests, you need to have all supported databases installed (for integration tests). The tests can then be executed by running the *run_tests* script or by executing the steps inside manually. All tests must be passed before a pull request can be opened. New code must be tested to keep the test coverage above 80% at least.
 
 ## License
 

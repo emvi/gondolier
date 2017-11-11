@@ -19,4 +19,4 @@ jobs:
       - checkout
       - run: sleep 10
       - run: go get github.com/lib/pq
-      - run: go test .
+      - run: go test -cover .
