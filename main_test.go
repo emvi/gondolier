@@ -7,10 +7,6 @@ import (
 	"testing"
 )
 
-const (
-	db_conn = "host=localhost port=5432 user=postgres password=postgres dbname=gondolier sslmode=disable"
-)
-
 var (
 	testdb *sql.DB
 )
@@ -18,7 +14,7 @@ var (
 func TestMain(m *testing.M) {
 	// connect to database
 	var err error
-	testdb, err = sql.Open("postgres", db_conn)
+	testdb, err = sql.Open("postgres", testGetDbString())
 
 	if err != nil {
 		panic(err)
@@ -31,4 +27,13 @@ func TestMain(m *testing.M) {
 	// run
 	code := m.Run()
 	os.Exit(code)
+}
+
+func testGetDbString() string {
+	return "host=" + os.Getenv("TEST_PG_HOST") +
+		" port=" + os.Getenv("TEST_PG_PORT") +
+		" user=" + os.Getenv("TEST_PG_USER") +
+		" password=" + os.Getenv("TEST_PG_PASSWORD") +
+		" dbname=" + os.Getenv("TEST_PG_DB") +
+		" sslmode=disable"
 }

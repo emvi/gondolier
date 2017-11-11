@@ -1,0 +1,10 @@
+#!/bin/bash
+
+export GOPATH=`pwd`
+export TEST_PG_HOST=localhost
+export TEST_PG_PORT=5432
+export TEST_PG_DB=gondolier
+export TEST_PG_USER=postgres
+export TEST_PG_PASSWORD=postgres
+
+go test -cover .

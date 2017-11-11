@@ -4,15 +4,19 @@ jobs:
     docker:
       - image: golang
         environment:
-          - PG_HOST=127.0.0.1
-          - PG_USER=postgres
+          - TEST_PG_HOST=localhost
+          - TEST_PG_PORT=5432
+          - TEST_PG_DB=gondolier
+          - TEST_PG_USER=postgres
+          - TEST_PG_PASSWORD=postgres
       - image: postgres
         environment:
+          - POSTGRES_DB=gondolier
           - POSTGRES_USER=postgres
           - POSTGRES_PASSWORD=postgres
-          - POSTGRES_DB=gondolier
     working_directory: /go/src/github.com/DeKugelschieber/gondolier
     steps:
       - checkout
+      - run: sleep 10
       - run: go get github.com/lib/pq
       - run: go test .
