@@ -25,7 +25,7 @@ type testPost struct {
 
 func TestPostgresCreateTable(t *testing.T) {
 	testCleanDb()
-	postgres := NewPostgres("public")
+	postgres := &Postgres{Schema: "public"}
 	Use(testdb, postgres)
 	Model(testUser{}, testPost{}, testPicture{})
 	Migrate()
@@ -74,7 +74,7 @@ func TestPostgresDropTable(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	postgres := NewPostgres("public")
+	postgres := &Postgres{Schema: "public"}
 	Use(testdb, postgres)
 	Drop(testUser{})
 
@@ -85,7 +85,7 @@ func TestPostgresDropTable(t *testing.T) {
 
 func TestPostgresDropTableNotExists(t *testing.T) {
 	testCleanDb()
-	postgres := NewPostgres("public")
+	postgres := &Postgres{Schema: "public"}
 	Use(testdb, postgres)
 	Drop(testUser{})
 

@@ -6,15 +6,12 @@ import (
 )
 
 type Postgres struct {
-	Schema string
+	Schema      string
+	DropColumns bool
 
 	sequences   []string
 	alterSeq    []string
 	foreignKeys []string
-}
-
-func NewPostgres(schema string) *Postgres {
-	return &Postgres{Schema: schema}
 }
 
 func (m *Postgres) Migrate(tx *sql.Tx, metaModels []MetaModel) {
