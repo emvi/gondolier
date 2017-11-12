@@ -9,9 +9,9 @@ type Postgres struct {
 	Schema      string
 	DropColumns bool
 
-	sequences   []string
-	alterSeq    []string
-	foreignKeys []string
+	createSeq []string
+	alterSeq  []string
+	createFK  []string
 }
 
 func (m *Postgres) Migrate(tx *sql.Tx, metaModels []MetaModel) {
@@ -21,20 +21,23 @@ func (m *Postgres) Migrate(tx *sql.Tx, metaModels []MetaModel) {
 	}
 
 	// create foreign keys
-	for _, fk := range m.foreignKeys {
+	for _, fk := range m.createFK {
 		if _, err := tx.Exec(fk); err != nil {
 			panic(err)
 		}
 	}
 
+	// drop foreign keys
+	// TODO
+
 	// reset
-	m.foreignKeys = make([]string, 0)
+	m.createFK = make([]string, 0)
 }
 
 func (m *Postgres) DropTable(tx *sql.Tx, name string) {
 	name = naming.Get(name)
 
-	if _, err := db.Exec(`DROP TABLE "` + name + `"`); err != nil {
+	if _, err := db.Exec(`DROP TABLE IF EXISTS "` + name + `"`); err != nil {
 		panic(err)
 	}
 }
@@ -44,13 +47,14 @@ func (m *Postgres) migrate(tx *sql.Tx, model *MetaModel) {
 		m.createTable(tx, model)
 	} else {
 		m.updateTable(tx, model)
+		m.dropColumns(tx, model)
 	}
 }
 
 func (m *Postgres) tableExists(name string) bool {
 	name = naming.Get(name)
 
-	rows, err := testdb.Query(`SELECT EXISTS (SELECT 1
+	rows, err := db.Query(`SELECT EXISTS (SELECT 1
 	   FROM information_schema.tables
 	   WHERE table_schema = $1
 	   AND table_name = $2)`, m.Schema, name)
@@ -69,10 +73,15 @@ func (m *Postgres) tableExists(name string) bool {
 	return exists
 }
 
+func (m *Postgres) columnExists(name string) bool {
+	// TODO
+	return false
+}
+
 func (m *Postgres) sequenceExists(name string) bool {
 	name = naming.Get(name)
 
-	rows, err := testdb.Query(`SELECT EXISTS (SELECT 1
+	rows, err := db.Query(`SELECT EXISTS (SELECT 1
 	   FROM pg_class
 	   WHERE relkind = 'S'
 	   AND oid::regclass::text = quote_ident($1))`, name)
@@ -95,7 +104,7 @@ func (m *Postgres) foreignKeyExists(tableName, fkName string) bool {
 	tableName = naming.Get(tableName)
 	fkName = naming.Get(fkName)
 
-	rows, err := testdb.Query(`SELECT EXISTS (SELECT 1
+	rows, err := db.Query(`SELECT EXISTS (SELECT 1
 		FROM information_schema.table_constraints
 		WHERE constraint_name = $1
 		AND table_name = $2)`, fkName, tableName)
@@ -116,10 +125,10 @@ func (m *Postgres) foreignKeyExists(tableName, fkName string) bool {
 
 func (m *Postgres) createTable(tx *sql.Tx, model *MetaModel) {
 	name := naming.Get(model.ModelName)
-	sql := `CREATE TABLE "` + name + `" (` + m.getColumns(model) + `)`
+	sql := `CREATE TABLE IF NOT EXISTS "` + name + `" (` + m.getColumns(model) + `)`
 
 	// create sequences if required
-	for _, seq := range m.sequences {
+	for _, seq := range m.createSeq {
 		if _, err := tx.Exec(seq); err != nil {
 			panic(err)
 		}
@@ -138,12 +147,16 @@ func (m *Postgres) createTable(tx *sql.Tx, model *MetaModel) {
 	}
 
 	// reset
-	m.sequences = make([]string, 0)
+	m.createSeq = make([]string, 0)
 	m.alterSeq = make([]string, 0)
 }
 
 func (m *Postgres) updateTable(tx *sql.Tx, model *MetaModel) {
+	// TODO
+}
 
+func (m *Postgres) dropColumns(tx *sql.Tx, model *MetaModel) {
+	// TODO
 }
 
 func (m *Postgres) getColumns(model *MetaModel) string {
@@ -215,7 +228,7 @@ func (m *Postgres) addSequence(modelName, columnName, info string) {
 	}
 
 	name := m.getSequenceName(modelName, columnName)
-	seq := `CREATE SEQUENCE "` + name + `"
+	seq := `CREATE SEQUENCE IF NOT EXISTS "` + name + `"
 		START WITH ` + infos[0] + `
 		INCREMENT BY ` + infos[1]
 
@@ -235,7 +248,7 @@ func (m *Postgres) addSequence(modelName, columnName, info string) {
 		seq += " CACHE " + infos[4]
 	}
 
-	m.sequences = append(m.sequences, seq)
+	m.createSeq = append(m.createSeq, seq)
 
 	// create owned by table
 	modelName = naming.Get(modelName)
@@ -267,7 +280,7 @@ func (m *Postgres) addForeignKey(modelName, columnName, info string) {
 		ADD CONSTRAINT "` + fkName + `"
 		FOREIGN KEY ("` + columnName + `")
 		REFERENCES "` + refTableName + `"("` + refColumnName + `")`
-	m.foreignKeys = append(m.foreignKeys, alterFk)
+	m.createFK = append(m.createFK, alterFk)
 }
 
 func (m *Postgres) getForeignKeyName(modelName, refObjName string) string {

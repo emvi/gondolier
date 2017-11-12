@@ -23,11 +23,23 @@ type testPost struct {
 	Picture uint64 `gondolier:"type:bigint;fk:testPicture.Id;null"`
 }
 
+type testArticle struct {
+	Id            uint64   `json:"id" gondolier:"type:bigint;pk;id;notnull"`
+	Filename      string   `json:"filename" gondolier:"type:character varying(255);notnull"`
+	Tags          []string `json:"tags" gondolier:"type:character varying(255)[]"`
+	Views         uint     `json:"views" gondolier:"type:integer;notnull"`
+	WIP           bool     `json:"wip" gondolier:"type:boolean;notnull"`
+	ReadEveryone  bool     `db:"read_everyone" json:"read_everyone" gondolier:"type:boolean;notnull"`
+	WriteEveryone bool     `db:"write_everyone" json:"write_everyone" gondolier:"type:boolean;notnull"`
+
+	SomeSlice []int `db:"-" json:"some_slice" gondolier:"-"`
+}
+
 func TestPostgresCreateTable(t *testing.T) {
 	testCleanDb()
 	postgres := &Postgres{Schema: "public"}
 	Use(testdb, postgres)
-	Model(testUser{}, testPost{}, testPicture{})
+	Model(testUser{}, testPost{}, testPicture{}, testArticle{})
 	Migrate()
 
 	if !postgres.tableExists("test_post") {
@@ -42,6 +54,10 @@ func TestPostgresCreateTable(t *testing.T) {
 		t.Fatal("Table must have been created: test_picture")
 	}
 
+	if !postgres.tableExists("test_article") {
+		t.Fatal("Table must have been created: test_article")
+	}
+
 	if !postgres.sequenceExists("test_post_id_seq") {
 		t.Fatal("Sequence must have been created: test_post_id_seq")
 	}
@@ -52,6 +68,10 @@ func TestPostgresCreateTable(t *testing.T) {
 
 	if !postgres.sequenceExists("test_picture_id_seq") {
 		t.Fatal("Sequence must have been created: test_picture_id_seq")
+	}
+
+	if !postgres.sequenceExists("test_article_id_seq") {
+		t.Fatal("Sequence must have been created: test_article_id_seq")
 	}
 
 	if !postgres.foreignKeyExists("test_user", "test_user_test_picture_fk") {
@@ -98,7 +118,9 @@ func testCleanDb() {
 	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_post_id_seq"`)
 	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_user_id_seq"`)
 	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_picture_id_seq"`)
+	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_article_id_seq"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_post"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_user"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_picture"`)
+	testdb.Exec(`DROP TABLE IF EXISTS "test_article"`)
 }
