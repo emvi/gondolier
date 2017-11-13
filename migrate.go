@@ -13,8 +13,8 @@ var (
 )
 
 type Migrator interface {
-	Migrate(*sql.Tx, []MetaModel)
-	DropTable(*sql.Tx, string)
+	Migrate([]MetaModel)
+	DropTable(string)
 }
 
 type NameSchema interface {
@@ -58,11 +58,8 @@ func Model(models ...interface{}) {
 // Migrate()
 func Migrate() {
 	checkSetup()
-	tx := begin()
-	defer rollback(tx)
-	migrator.Migrate(tx, metaModels)
+	migrator.Migrate(metaModels)
 	reset()
-	commit(tx)
 }
 
 // Drops tables for given models if exists.
@@ -72,15 +69,11 @@ func Migrate() {
 // Example: Drop(&MyModel{}, AnotherModel{})
 func Drop(models ...interface{}) {
 	checkSetup()
-	tx := begin()
-	defer rollback(tx)
 
 	for _, model := range models {
 		metaModel := buildMetaModel(model)
-		migrator.DropTable(tx, metaModel.ModelName)
+		migrator.DropTable(metaModel.ModelName)
 	}
-
-	commit(tx)
 }
 
 func modelExists(model interface{}) bool {
@@ -106,30 +99,6 @@ func checkSetup() {
 
 	if naming == nil {
 		panic("No naming was set, call Naming(naming) to set one")
-	}
-}
-
-func begin() *sql.Tx {
-	tx, err := db.Begin()
-
-	if err != nil {
-		panic(err)
-	}
-
-	return tx
-}
-
-func rollback(tx *sql.Tx) {
-	if r := recover(); r != nil {
-		if err := tx.Rollback(); err != nil {
-			panic(err)
-		}
-	}
-}
-
-func commit(tx *sql.Tx) {
-	if err := tx.Commit(); err != nil {
-		panic(err)
 	}
 }
 

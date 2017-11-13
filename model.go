@@ -70,7 +70,8 @@ func getModelFields(model interface{}) []MetaField {
 			continue
 		}
 
-		if kind == reflect.Struct || kind == reflect.Ptr || kind == reflect.Interface {
+		if (kind == reflect.Struct || kind == reflect.Ptr || kind == reflect.Interface) &&
+			field.Type.String() != "time.Time" {
 			panic("The type for field '" + field.Name + "' is invalid")
 		}
 

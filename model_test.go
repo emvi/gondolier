@@ -2,13 +2,15 @@ package gondolier
 
 import (
 	"testing"
+	"time"
 )
 
 type testModel struct {
-	Id    uint64 `gondolier:"type:integer;primarykey;notnull;;"` // accept multiple ;
-	Name  string `gondolier:"type:varchar;unique"`
-	Age   int    `gondolier:"type:integer;notnull"`
-	Array []int  `gondolier:"type:integer[]"`
+	Id    uint64    `gondolier:"type:integer;primarykey;notnull;;"` // accept multiple ;
+	Name  string    `gondolier:"type:varchar;unique"`
+	Age   int       `gondolier:"type:integer;notnull"`
+	Array []int     `gondolier:"type:integer[]"`
+	Date  time.Time `gondolier:"type:timestamp"`
 }
 
 type testInvalidTypesModel struct {
@@ -56,20 +58,21 @@ func TestGetModelNameStructOnly(t *testing.T) {
 func TestGetModelFields(t *testing.T) {
 	fields := getModelFields(&testModel{})
 
-	if len(fields) != 4 {
+	if len(fields) != 5 {
 		t.Fatalf("All fields must be returned: %v", len(fields))
 	}
 
 	if fields[0].Name != "Id" ||
 		fields[1].Name != "Name" ||
 		fields[2].Name != "Age" ||
-		fields[3].Name != "Array" {
+		fields[3].Name != "Array" ||
+		fields[4].Name != "Date" {
 		t.Fatal("Field names must be correct")
 	}
 
 	fields = getModelFields(testModel{})
 
-	if len(fields) != 4 {
+	if len(fields) != 5 {
 		t.Fatalf("All fields must be returned: %v", len(fields))
 	}
 }

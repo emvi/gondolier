@@ -1,7 +1,6 @@
 package gondolier
 
 import (
-	"database/sql"
 	"strings"
 )
 
@@ -14,15 +13,15 @@ type Postgres struct {
 	createFK  []string
 }
 
-func (m *Postgres) Migrate(tx *sql.Tx, metaModels []MetaModel) {
+func (m *Postgres) Migrate(metaModels []MetaModel) {
 	// create or update table
 	for _, model := range metaModels {
-		m.migrate(tx, &model)
+		m.migrate(&model)
 	}
 
 	// create foreign keys
 	for _, fk := range m.createFK {
-		if _, err := tx.Exec(fk); err != nil {
+		if _, err := db.Exec(fk); err != nil {
 			panic(err)
 		}
 	}
@@ -34,7 +33,7 @@ func (m *Postgres) Migrate(tx *sql.Tx, metaModels []MetaModel) {
 	m.createFK = make([]string, 0)
 }
 
-func (m *Postgres) DropTable(tx *sql.Tx, name string) {
+func (m *Postgres) DropTable(name string) {
 	name = naming.Get(name)
 
 	if _, err := db.Exec(`DROP TABLE IF EXISTS "` + name + `"`); err != nil {
@@ -42,12 +41,12 @@ func (m *Postgres) DropTable(tx *sql.Tx, name string) {
 	}
 }
 
-func (m *Postgres) migrate(tx *sql.Tx, model *MetaModel) {
+func (m *Postgres) migrate(model *MetaModel) {
 	if !m.tableExists(model.ModelName) {
-		m.createTable(tx, model)
+		m.createTable(model)
 	} else {
-		m.updateTable(tx, model)
-		m.dropColumns(tx, model)
+		m.updateTable(model)
+		m.dropColumns(model)
 	}
 }
 
@@ -123,25 +122,25 @@ func (m *Postgres) foreignKeyExists(tableName, fkName string) bool {
 	return exists
 }
 
-func (m *Postgres) createTable(tx *sql.Tx, model *MetaModel) {
+func (m *Postgres) createTable(model *MetaModel) {
 	name := naming.Get(model.ModelName)
 	sql := `CREATE TABLE IF NOT EXISTS "` + name + `" (` + m.getColumns(model) + `)`
 
 	// create sequences if required
 	for _, seq := range m.createSeq {
-		if _, err := tx.Exec(seq); err != nil {
+		if _, err := db.Exec(seq); err != nil {
 			panic(err)
 		}
 	}
 
 	// create table
-	if _, err := tx.Exec(sql); err != nil {
+	if _, err := db.Exec(sql); err != nil {
 		panic(err)
 	}
 
 	// alter sequence if required
 	for _, seq := range m.alterSeq {
-		if _, err := tx.Exec(seq); err != nil {
+		if _, err := db.Exec(seq); err != nil {
 			panic(err)
 		}
 	}
@@ -151,11 +150,11 @@ func (m *Postgres) createTable(tx *sql.Tx, model *MetaModel) {
 	m.alterSeq = make([]string, 0)
 }
 
-func (m *Postgres) updateTable(tx *sql.Tx, model *MetaModel) {
+func (m *Postgres) updateTable(model *MetaModel) {
 	// TODO
 }
 
-func (m *Postgres) dropColumns(tx *sql.Tx, model *MetaModel) {
+func (m *Postgres) dropColumns(model *MetaModel) {
 	// TODO
 }
 

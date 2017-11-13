@@ -1,7 +1,6 @@
 package gondolier
 
 import (
-	"database/sql"
 	"testing"
 )
 
@@ -21,11 +20,11 @@ type dummyMigrator struct {
 	drop   []string
 }
 
-func (m *dummyMigrator) Migrate(tx *sql.Tx, metaModels []MetaModel) {
+func (m *dummyMigrator) Migrate(metaModels []MetaModel) {
 	m.models = metaModels
 }
 
-func (m *dummyMigrator) DropTable(tx *sql.Tx, name string) {
+func (m *dummyMigrator) DropTable(name string) {
 	m.drop = append(m.drop, name)
 }
 
