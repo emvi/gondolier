@@ -2,6 +2,7 @@ package gondolier
 
 import (
 	"database/sql"
+	"log"
 	"strings"
 )
 
@@ -173,7 +174,21 @@ func (m *Postgres) createTable(model *MetaModel) {
 }
 
 func (m *Postgres) updateTable(model *MetaModel) {
-	// TODO
+	for _, field := range model.Fields {
+		if m.columnExists(model.ModelName, field.Name) {
+			// TODO update
+		} else {
+			// create new column
+			tableName := naming.Get(model.ModelName)
+			columnName := naming.Get(field.Name)
+
+			log.Println(`ALTER TABLE "` + tableName + `" ADD COLUMN "` + columnName + `" ` + m.getTags(tableName, &field))
+
+			if _, err := db.Exec(`ALTER TABLE "` + tableName + `" ADD COLUMN ` + m.getTags(tableName, &field)); err != nil {
+				panic(err)
+			}
+		}
+	}
 }
 
 // Drops all columns that are no longer needed.

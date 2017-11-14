@@ -6,33 +6,42 @@ import (
 
 type testUser struct {
 	Id      uint64 `gondolier:"type:bigint;pk;seq:1,1,-,-,1;default:nextval(seq);notnull"`
-	Name    string `gondolier:"type:character varying(255);notnull;unique"`
+	Name    string `gondolier:"type:varchar(255);notnull;unique"`
 	Age     uint   `gondolier:"type:integer;notnull"`
 	Picture uint64 `gondolier:"type:bigint;fk:testPicture.Id;null"`
 }
 
 type testPicture struct {
 	Id       uint64 `gondolier:"type:bigint;pk;id;notnull"`
-	FileName string `gondolier:"type:character varying(255);notnull"`
+	FileName string `gondolier:"type:varchar(255);notnull"`
 }
 
 type testPost struct {
 	Id      uint64 `gondolier:"type:bigint;pk;id;notnull"`
-	Post    string `gondolier:"type:character varying(255);notnull"`
+	Post    string `gondolier:"type:varchar(255);notnull"`
 	User    uint64 `gondolier:"type:bigint;fk:testUser.Id;notnull"`
 	Picture uint64 `gondolier:"type:bigint;fk:testPicture.Id;null"`
 }
 
 type testArticle struct {
-	Id            uint64   `json:"id" gondolier:"type:bigint;pk;id;notnull"`
-	Filename      string   `json:"filename" gondolier:"type:character varying(255);notnull"`
-	Tags          []string `json:"tags" gondolier:"type:character varying(255)[]"`
-	Views         uint     `json:"views" gondolier:"type:integer;notnull"`
-	WIP           bool     `json:"wip" gondolier:"type:boolean;notnull"`
-	ReadEveryone  bool     `db:"read_everyone" json:"read_everyone" gondolier:"type:boolean;notnull"`
-	WriteEveryone bool     `db:"write_everyone" json:"write_everyone" gondolier:"type:boolean;notnull"`
+	Id            uint64   `gondolier:"type:bigint;pk;id;notnull"`
+	Filename      string   `gondolier:"type:varchar(255);notnull"`
+	Tags          []string `gondolier:"type:varchar(255)[]"`
+	Views         uint     `gondolier:"type:integer;notnull"`
+	WIP           bool     `gondolier:"type:boolean;notnull"`
+	ReadEveryone  bool     `gondolier:"type:boolean;notnull"`
+	WriteEveryone bool     `gondolier:"type:boolean;notnull"`
 
-	SomeSlice []int `db:"-" json:"some_slice" gondolier:"-"`
+	SomeSlice []int `gondolier:"-"`
+}
+
+type testDropColumn struct {
+	Id uint64 `gondolier:"type:bigint;pk;id;notnull"`
+}
+
+type testAddColumn struct {
+	Id        uint64 `gondolier:"type:bigint;pk;id;notnull"`
+	NewColumn string `gondolier:"type:varchar(255)"`
 }
 
 func TestPostgresCreateTable(t *testing.T) {
@@ -117,22 +126,39 @@ func TestPostgresDropTableNotExists(t *testing.T) {
 func TestPostgresDropColumn(t *testing.T) {
 	testCleanDb()
 
-	if _, err := testdb.Exec(`CREATE TABLE "test_user"
+	if _, err := testdb.Exec(`CREATE TABLE "test_drop_column"
 		("id" bigint not null, "drop_me" text not null)`); err != nil {
 		t.Fatal(err)
 	}
 
 	postgres := &Postgres{Schema: "public", DropColumns: true}
 	Use(testdb, postgres)
-	Model(testUser{})
+	Model(testDropColumn{})
 	Migrate()
 
-	if postgres.columnExists("test_user", "drop_me") {
+	if postgres.columnExists("test_drop_column", "drop_me") {
 		t.Fatal("Column 'drop_me' should not exist anymore")
 	}
 
-	if !postgres.columnExists("test_user", "id") {
+	if !postgres.columnExists("test_drop_column", "id") {
 		t.Fatal("Column 'id' must still exist")
+	}
+}
+
+func TestPostgresAddColumn(t *testing.T) {
+	testCleanDb()
+
+	if _, err := testdb.Exec(`CREATE TABLE "test_add_column" ("id" bigint not null)`); err != nil {
+		t.Fatal(err)
+	}
+
+	postgres := &Postgres{Schema: "public"}
+	Use(testdb, postgres)
+	Model(testAddColumn{})
+	Migrate()
+
+	if !postgres.columnExists("test_add_column", "new_column") {
+		t.Fatal("Column 'new_column' must exist")
 	}
 }
 
@@ -145,4 +171,6 @@ func testCleanDb() {
 	testdb.Exec(`DROP TABLE IF EXISTS "test_user"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_picture"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_article"`)
+	testdb.Exec(`DROP TABLE IF EXISTS "test_drop_column"`)
+	testdb.Exec(`DROP TABLE IF EXISTS "test_add_column"`)
 }
