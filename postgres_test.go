@@ -114,6 +114,28 @@ func TestPostgresDropTableNotExists(t *testing.T) {
 	}
 }
 
+func TestPostgresDropColumn(t *testing.T) {
+	testCleanDb()
+
+	if _, err := testdb.Exec(`CREATE TABLE "test_user"
+		("id" bigint not null, "drop_me" text not null)`); err != nil {
+		t.Fatal(err)
+	}
+
+	postgres := &Postgres{Schema: "public", DropColumns: true}
+	Use(testdb, postgres)
+	Model(testUser{})
+	Migrate()
+
+	if postgres.columnExists("test_user", "drop_me") {
+		t.Fatal("Column 'drop_me' should not exist anymore")
+	}
+
+	if !postgres.columnExists("test_user", "id") {
+		t.Fatal("Column 'id' must still exist")
+	}
+}
+
 func testCleanDb() {
 	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_post_id_seq"`)
 	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_user_id_seq"`)

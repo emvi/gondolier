@@ -1,6 +1,7 @@
 package gondolier
 
 import (
+	"database/sql"
 	"strings"
 )
 
@@ -46,7 +47,10 @@ func (m *Postgres) migrate(model *MetaModel) {
 		m.createTable(model)
 	} else {
 		m.updateTable(model)
-		m.dropColumns(model)
+
+		if m.DropColumns {
+			m.dropColumns(model)
+		}
 	}
 }
 
@@ -58,23 +62,20 @@ func (m *Postgres) tableExists(name string) bool {
 	   WHERE table_schema = $1
 	   AND table_name = $2)`, m.Schema, name)
 
-	if err != nil {
-		panic(err)
-	}
-
-	var exists bool
-	rows.Next()
-
-	if err := rows.Scan(&exists); err != nil {
-		panic(err)
-	}
-
-	return exists
+	return m.scanBool(rows, err)
 }
 
-func (m *Postgres) columnExists(name string) bool {
-	// TODO
-	return false
+func (m *Postgres) columnExists(tableName, columnName string) bool {
+	tableName = naming.Get(tableName)
+	columnName = naming.Get(columnName)
+
+	rows, err := db.Query(`SELECT EXISTS (SELECT 1
+	   FROM information_schema.columns
+	   WHERE table_schema = $1
+	   AND table_name = $2
+	   AND column_name = $3)`, m.Schema, tableName, columnName)
+
+	return m.scanBool(rows, err)
 }
 
 func (m *Postgres) sequenceExists(name string) bool {
@@ -85,18 +86,7 @@ func (m *Postgres) sequenceExists(name string) bool {
 	   WHERE relkind = 'S'
 	   AND oid::regclass::text = quote_ident($1))`, name)
 
-	if err != nil {
-		panic(err)
-	}
-
-	var exists bool
-	rows.Next()
-
-	if err := rows.Scan(&exists); err != nil {
-		panic(err)
-	}
-
-	return exists
+	return m.scanBool(rows, err)
 }
 
 func (m *Postgres) foreignKeyExists(tableName, fkName string) bool {
@@ -105,9 +95,41 @@ func (m *Postgres) foreignKeyExists(tableName, fkName string) bool {
 
 	rows, err := db.Query(`SELECT EXISTS (SELECT 1
 		FROM information_schema.table_constraints
-		WHERE constraint_name = $1
-		AND table_name = $2)`, fkName, tableName)
+		WHERE table_schema = $1
+		AND constraint_name = $2
+		AND table_name = $3)`, m.Schema, fkName, tableName)
 
+	return m.scanBool(rows, err)
+}
+
+func (m *Postgres) getColumnNames(tableName string) []string {
+	tableName = naming.Get(tableName)
+
+	rows, err := db.Query(`SELECT column_name
+		FROM information_schema.columns
+		WHERE table_schema = $1
+		AND table_name = $2`, m.Schema, tableName)
+
+	if err != nil {
+		panic(err)
+	}
+
+	names := make([]string, 0)
+
+	for rows.Next() {
+		var name string
+
+		if err := rows.Scan(&name); err != nil {
+			panic(err)
+		}
+
+		names = append(names, name)
+	}
+
+	return names
+}
+
+func (m *Postgres) scanBool(rows *sql.Rows, err error) bool {
 	if err != nil {
 		panic(err)
 	}
@@ -154,8 +176,29 @@ func (m *Postgres) updateTable(model *MetaModel) {
 	// TODO
 }
 
+// Drops all columns that are no longer needed.
 func (m *Postgres) dropColumns(model *MetaModel) {
-	// TODO
+	tableName := naming.Get(model.ModelName)
+	columns := m.getColumnNames(model.ModelName)
+
+	for _, column := range columns {
+		if !m.fieldsContainColumn(model.Fields, column) {
+			if _, err := db.Exec(`ALTER TABLE "` + tableName + `"
+				DROP COLUMN IF EXISTS "` + column + `"`); err != nil {
+				panic(err)
+			}
+		}
+	}
+}
+
+func (m *Postgres) fieldsContainColumn(fields []MetaField, column string) bool {
+	for _, field := range fields {
+		if naming.Get(field.Name) == column {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (m *Postgres) getColumns(model *MetaModel) string {
