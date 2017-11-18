@@ -44,9 +44,15 @@ type testAddColumn struct {
 	NewColumn string `gondolier:"type:varchar(255)"`
 }
 
+type testUpdateColumn struct {
+	Column string `gondolier:"type:varchar(255);pk;notnull;unique"`
+}
+
 func TestPostgresCreateTable(t *testing.T) {
 	testCleanDb()
-	postgres := &Postgres{Schema: "public"}
+	t.Log("--- TestPostgresCreateTable ---")
+
+	postgres := &Postgres{Schema: "public", Log: true}
 	Use(testdb, postgres)
 	Model(testUser{}, testPost{}, testPicture{}, testArticle{})
 	Migrate()
@@ -98,12 +104,13 @@ func TestPostgresCreateTable(t *testing.T) {
 
 func TestPostgresDropTable(t *testing.T) {
 	testCleanDb()
+	t.Log("--- TestPostgresDropTable ---")
 
 	if _, err := testdb.Exec(`CREATE TABLE "test_user" ("id" bigint not null)`); err != nil {
 		t.Fatal(err)
 	}
 
-	postgres := &Postgres{Schema: "public"}
+	postgres := &Postgres{Schema: "public", Log: true}
 	Use(testdb, postgres)
 	Drop(testUser{})
 
@@ -114,7 +121,9 @@ func TestPostgresDropTable(t *testing.T) {
 
 func TestPostgresDropTableNotExists(t *testing.T) {
 	testCleanDb()
-	postgres := &Postgres{Schema: "public"}
+	t.Log("--- TestPostgresDropTableNotExists ---")
+
+	postgres := &Postgres{Schema: "public", Log: true}
 	Use(testdb, postgres)
 	Drop(testUser{})
 
@@ -125,13 +134,14 @@ func TestPostgresDropTableNotExists(t *testing.T) {
 
 func TestPostgresDropColumn(t *testing.T) {
 	testCleanDb()
+	t.Log("--- TestPostgresDropColumn ---")
 
 	if _, err := testdb.Exec(`CREATE TABLE "test_drop_column"
 		("id" bigint not null, "drop_me" text not null)`); err != nil {
 		t.Fatal(err)
 	}
 
-	postgres := &Postgres{Schema: "public", DropColumns: true}
+	postgres := &Postgres{Schema: "public", DropColumns: true, Log: true}
 	Use(testdb, postgres)
 	Model(testDropColumn{})
 	Migrate()
@@ -147,18 +157,39 @@ func TestPostgresDropColumn(t *testing.T) {
 
 func TestPostgresAddColumn(t *testing.T) {
 	testCleanDb()
+	t.Log("--- TestPostgresAddColumn ---")
 
 	if _, err := testdb.Exec(`CREATE TABLE "test_add_column" ("id" bigint not null)`); err != nil {
 		t.Fatal(err)
 	}
 
-	postgres := &Postgres{Schema: "public"}
+	postgres := &Postgres{Schema: "public", Log: true}
 	Use(testdb, postgres)
 	Model(testAddColumn{})
 	Migrate()
 
 	if !postgres.columnExists("test_add_column", "new_column") {
 		t.Fatal("Column 'new_column' must exist")
+	}
+}
+
+func TestPostgresUpdateColumn(t *testing.T) {
+	testCleanDb()
+	t.Log("--- TestPostgresUpdateColumn ---")
+
+	if _, err := testdb.Exec(`CREATE TABLE "test_update_column"
+		("column" text)`); err != nil {
+		t.Fatal(err)
+	}
+
+	postgres := &Postgres{Schema: "public", Log: true}
+	Use(testdb, postgres)
+	Model(testUpdateColumn{})
+	Migrate()
+	istype := postgres.getColumnType("test_update_column", "column")
+
+	if istype != "character varying" {
+		t.Fatalf("Type must be character varying, but was %v", istype)
 	}
 }
 
@@ -173,4 +204,5 @@ func testCleanDb() {
 	testdb.Exec(`DROP TABLE IF EXISTS "test_article"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_drop_column"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_add_column"`)
+	testdb.Exec(`DROP TABLE IF EXISTS "test_update_column"`)
 }
