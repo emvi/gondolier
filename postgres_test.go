@@ -191,6 +191,10 @@ func TestPostgresUpdateColumn(t *testing.T) {
 	if istype != "character varying" {
 		t.Fatalf("Type must be character varying, but was %v", istype)
 	}
+
+	if postgres.isNullable("test_update_column", "column") {
+		t.Fatal("Column must not be nullable")
+	}
 }
 
 func testCleanDb() {

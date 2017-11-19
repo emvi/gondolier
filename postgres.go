@@ -108,6 +108,19 @@ func (m *Postgres) foreignKeyExists(tableName, fkName string) bool {
 	return m.scanBool(rows, err)
 }
 
+func (m *Postgres) isNullable(tableName, columnName string) bool {
+	tableName = naming.Get(tableName)
+	columnName = naming.Get(columnName)
+
+	rows, err := db.Query(`SELECT is_nullable::boolean
+		FROM information_schema.columns
+		WHERE table_schema = $1
+		AND column_name = $2
+		AND table_name = $3`, m.Schema, columnName, tableName)
+
+	return m.scanBool(rows, err)
+}
+
 func (m *Postgres) scanBool(rows *sql.Rows, err error) bool {
 	if err != nil {
 		panic(err)
@@ -208,6 +221,7 @@ func (m *Postgres) createTable(model *MetaModel) {
 func (m *Postgres) updateTable(model *MetaModel) {
 	for _, field := range model.Fields {
 		if m.columnExists(model.ModelName, field.Name) {
+			// update existing column
 			m.updateColumn(model, &field)
 		} else {
 			// create new column
@@ -226,6 +240,7 @@ func (m *Postgres) updateTable(model *MetaModel) {
 func (m *Postgres) updateColumn(model *MetaModel, field *MetaField) {
 	tableName := naming.Get(model.ModelName)
 	columnName := naming.Get(field.Name)
+	notnull := false
 
 	for _, tag := range field.Tags {
 		key := strings.ToLower(tag.Name)
@@ -233,8 +248,12 @@ func (m *Postgres) updateColumn(model *MetaModel, field *MetaField) {
 
 		if key == "type" {
 			m.updateColumnType(tableName, columnName, value)
+		} else if value == "notnull" || value == "not null" {
+			notnull = true
 		}
 	}
+
+	m.updateColumnNotNull(tableName, columnName, notnull)
 }
 
 func (m *Postgres) updateColumnType(tableName, columnName, newtype string) {
@@ -248,6 +267,22 @@ func (m *Postgres) updateColumnType(tableName, columnName, newtype string) {
 		if _, err := db.Exec(query); err != nil {
 			panic(err)
 		}
+	}
+}
+
+func (m *Postgres) updateColumnNotNull(tableName, columnName string, notnull bool) {
+	query := `ALTER TABLE "` + tableName + `" ALTER COLUMN "` + columnName + `"`
+
+	if notnull {
+		query += " SET NOT NULL"
+	} else {
+		query += " DROP NOT NULL"
+	}
+
+	m.log(query)
+
+	if _, err := db.Exec(query); err != nil {
+		panic(err)
 	}
 }
 
