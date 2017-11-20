@@ -45,7 +45,7 @@ type testAddColumn struct {
 }
 
 type testUpdateColumn struct {
-	Column string `gondolier:"type:varchar(255);pk;notnull;unique"`
+	Column string `gondolier:"type:varchar(255);default:'default';notnull;unique"`
 }
 
 func TestPostgresCreateTable(t *testing.T) {

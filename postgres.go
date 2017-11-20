@@ -24,11 +24,7 @@ func (m *Postgres) Migrate(metaModels []MetaModel) {
 
 	// create foreign keys
 	for _, fk := range m.createFK {
-		m.log(fk)
-
-		if _, err := db.Exec(fk); err != nil {
-			panic(err)
-		}
+		m.exec(fk)
 	}
 
 	// drop foreign keys
@@ -41,11 +37,7 @@ func (m *Postgres) Migrate(metaModels []MetaModel) {
 func (m *Postgres) DropTable(name string) {
 	name = naming.Get(name)
 	query := `DROP TABLE IF EXISTS "` + name + `"`
-	m.log(query)
-
-	if _, err := db.Exec(query); err != nil {
-		panic(err)
-	}
+	m.exec(query)
 }
 
 func (m *Postgres) migrate(model *MetaModel) {
@@ -190,27 +182,15 @@ func (m *Postgres) createTable(model *MetaModel) {
 
 	// create sequences if required
 	for _, seq := range m.createSeq {
-		m.log(seq)
-
-		if _, err := db.Exec(seq); err != nil {
-			panic(err)
-		}
+		m.exec(seq)
 	}
 
 	// create table
-	m.log(sql)
-
-	if _, err := db.Exec(sql); err != nil {
-		panic(err)
-	}
+	m.exec(sql)
 
 	// alter sequence if required
 	for _, seq := range m.alterSeq {
-		m.log(seq)
-
-		if _, err := db.Exec(seq); err != nil {
-			panic(err)
-		}
+		m.exec(seq)
 	}
 
 	// reset
@@ -228,11 +208,7 @@ func (m *Postgres) updateTable(model *MetaModel) {
 			tableName := naming.Get(model.ModelName)
 			columnName := naming.Get(field.Name)
 			query := `ALTER TABLE "` + tableName + `" ADD COLUMN "` + columnName + `" ` + m.getTags(tableName, &field)
-			m.log(query)
-
-			if _, err := db.Exec(query); err != nil {
-				panic(err)
-			}
+			m.exec(query)
 		}
 	}
 }
@@ -240,7 +216,8 @@ func (m *Postgres) updateTable(model *MetaModel) {
 func (m *Postgres) updateColumn(model *MetaModel, field *MetaField) {
 	tableName := naming.Get(model.ModelName)
 	columnName := naming.Get(field.Name)
-	notnull := false
+	notnull, isId := false, false
+	defaultValue := ""
 
 	for _, tag := range field.Tags {
 		key := strings.ToLower(tag.Name)
@@ -250,10 +227,15 @@ func (m *Postgres) updateColumn(model *MetaModel, field *MetaField) {
 			m.updateColumnType(tableName, columnName, value)
 		} else if value == "notnull" || value == "not null" {
 			notnull = true
+		} else if key == "default" {
+			defaultValue = value
+		} else if value == "id" {
+			isId = true
 		}
 	}
 
 	m.updateColumnNotNull(tableName, columnName, notnull)
+	m.updateColumnDefault(tableName, columnName, defaultValue, isId)
 }
 
 func (m *Postgres) updateColumnType(tableName, columnName, newtype string) {
@@ -262,11 +244,7 @@ func (m *Postgres) updateColumnType(tableName, columnName, newtype string) {
 	if istype != newtype {
 		query := `ALTER TABLE "` + tableName + `" ALTER COLUMN "` + columnName + `"
 					TYPE ` + newtype
-		m.log(query)
-
-		if _, err := db.Exec(query); err != nil {
-			panic(err)
-		}
+		m.exec(query)
 	}
 }
 
@@ -279,11 +257,30 @@ func (m *Postgres) updateColumnNotNull(tableName, columnName string, notnull boo
 		query += " DROP NOT NULL"
 	}
 
-	m.log(query)
+	m.exec(query)
+}
 
-	if _, err := db.Exec(query); err != nil {
-		panic(err)
+func (m *Postgres) updateColumnDefault(tableName, columnName, value string, isId bool) {
+	query := ""
+
+	if value != "" || isId {
+		// set default
+		if isId {
+			m.addSequence(tableName, columnName, "1,1,-,-,1")
+			m.exec(m.createSeq[0])
+			m.exec(m.alterSeq[0])
+			m.createSeq = make([]string, 0)
+			m.alterSeq = make([]string, 0)
+			query = `ALTER TABLE "` + tableName + `" ALTER COLUMN "` + columnName + `" SET DEFAULT nextval('` + m.getSequenceName(tableName, columnName) + `'::regclass)`
+		} else {
+			query = `ALTER TABLE "` + tableName + `" ALTER COLUMN "` + columnName + `" SET DEFAULT ` + value
+		}
+	} else {
+		// drop default
+		query = `ALTER TABLE "` + tableName + `" ALTER COLUMN "` + columnName + `" DROP DEFAULT`
 	}
+
+	m.exec(query)
 }
 
 // Drops all columns that are no longer needed.
@@ -292,19 +289,15 @@ func (m *Postgres) dropColumns(model *MetaModel) {
 	columns := m.getColumnNames(model.ModelName)
 
 	for _, column := range columns {
-		if !m.fieldsContainColumn(model.Fields, column) {
+		if !m.fieldsContainsColumn(model.Fields, column) {
 			query := `ALTER TABLE "` + tableName + `"
 				DROP COLUMN IF EXISTS "` + column + `"`
-			m.log(query)
-
-			if _, err := db.Exec(query); err != nil {
-				panic(err)
-			}
+			m.exec(query)
 		}
 	}
 }
 
-func (m *Postgres) fieldsContainColumn(fields []MetaField, column string) bool {
+func (m *Postgres) fieldsContainsColumn(fields []MetaField, column string) bool {
 	for _, field := range fields {
 		if naming.Get(field.Name) == column {
 			return true
@@ -444,8 +437,12 @@ func (m *Postgres) getForeignKeyName(modelName, refObjName string) string {
 	return modelName + "_" + refObjName + "_fk"
 }
 
-func (m *Postgres) log(query string) {
+func (m *Postgres) exec(query string) {
 	if m.Log {
 		log.Println(query)
+	}
+
+	if _, err := db.Exec(query); err != nil {
+		panic(err)
 	}
 }
