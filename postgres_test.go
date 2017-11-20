@@ -45,7 +45,7 @@ type testAddColumn struct {
 }
 
 type testUpdateColumn struct {
-	Column string `gondolier:"type:varchar(255);default:'default';notnull;unique"`
+	Column string `gondolier:"type:varchar(255);default:'default';notnull;unique;pk"`
 }
 
 func TestPostgresCreateTable(t *testing.T) {
@@ -195,6 +195,21 @@ func TestPostgresUpdateColumn(t *testing.T) {
 	if postgres.isNullable("test_update_column", "column") {
 		t.Fatal("Column must not be nullable")
 	}
+
+	if !postgres.constraintExists("test_update_column_pkey") {
+		t.Fatal("Primary key constraint must exist")
+	}
+
+	if !postgres.constraintExists("test_update_column_column_unique") {
+		t.Fatal("Unique constraint must exist")
+	}
+}
+
+func TestPostgresUpdateColumnReduce(t *testing.T) {
+	testCleanDb()
+	t.Log("--- TestPostgresUpdateColumnReduce ---")
+
+	// TODO
 }
 
 func testCleanDb() {

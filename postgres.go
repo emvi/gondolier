@@ -113,6 +113,15 @@ func (m *Postgres) isNullable(tableName, columnName string) bool {
 	return m.scanBool(rows, err)
 }
 
+func (m *Postgres) constraintExists(name string) bool {
+	name = naming.Get(name)
+
+	rows, err := db.Query(`SELECT EXISTS (SELECT 1
+		FROM pg_constraint WHERE conname = $1)`, name)
+
+	return m.scanBool(rows, err)
+}
+
 func (m *Postgres) scanBool(rows *sql.Rows, err error) bool {
 	if err != nil {
 		panic(err)
@@ -199,6 +208,9 @@ func (m *Postgres) createTable(model *MetaModel) {
 }
 
 func (m *Postgres) updateTable(model *MetaModel) {
+	tableName := naming.Get(model.ModelName)
+	m.exec(`ALTER TABLE "` + tableName + `" DROP CONSTRAINT IF EXISTS "` + tableName + `_pkey"`)
+
 	for _, field := range model.Fields {
 		if m.columnExists(model.ModelName, field.Name) {
 			// update existing column
@@ -216,7 +228,7 @@ func (m *Postgres) updateTable(model *MetaModel) {
 func (m *Postgres) updateColumn(model *MetaModel, field *MetaField) {
 	tableName := naming.Get(model.ModelName)
 	columnName := naming.Get(field.Name)
-	notnull, isId := false, false
+	notnull, isId, pk, unique := false, false, false, false
 	defaultValue := ""
 
 	for _, tag := range field.Tags {
@@ -231,11 +243,17 @@ func (m *Postgres) updateColumn(model *MetaModel, field *MetaField) {
 			defaultValue = value
 		} else if value == "id" {
 			isId = true
+		} else if value == "pk" || value == "primary key" {
+			pk = true
+		} else if value == "unique" {
+			unique = true
 		}
 	}
 
 	m.updateColumnNotNull(tableName, columnName, notnull)
 	m.updateColumnDefault(tableName, columnName, defaultValue, isId)
+	m.updateColumnPK(tableName, columnName, pk)
+	m.updateColumnUnique(tableName, columnName, unique)
 }
 
 func (m *Postgres) updateColumnType(tableName, columnName, newtype string) {
@@ -278,6 +296,29 @@ func (m *Postgres) updateColumnDefault(tableName, columnName, value string, isId
 	} else {
 		// drop default
 		query = `ALTER TABLE "` + tableName + `" ALTER COLUMN "` + columnName + `" DROP DEFAULT`
+	}
+
+	m.exec(query)
+}
+
+func (m *Postgres) updateColumnPK(tableName, columnName string, pk bool) {
+	if !pk {
+		return
+	}
+
+	if !m.constraintExists(tableName + "_pkey") {
+		m.exec(`ALTER TABLE "` + tableName + `" ADD PRIMARY KEY ("` + columnName + `")`)
+	}
+}
+
+func (m *Postgres) updateColumnUnique(tableName, columnName string, unique bool) {
+	query := ""
+	constraintName := tableName + "_" + columnName + "_unique"
+
+	if unique && !m.constraintExists(constraintName) {
+		query = `ALTER TABLE "` + tableName + `" ADD CONSTRAINT "` + constraintName + `" UNIQUE ("` + columnName + `")`
+	} else if !unique && m.constraintExists(constraintName) {
+		query = `ALTER TABLE "` + tableName + `" DROP CONSTRAINT "` + constraintName + `"`
 	}
 
 	m.exec(query)
