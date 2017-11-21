@@ -7,14 +7,16 @@
 [![GoDoc](https://godoc.org/github.com/DeKugelschieber/gondolier?status.svg)](https://godoc.org/github.com/DeKugelschieber/gondolier)
 [![CircleCI](https://circleci.com/gh/DeKugelschieber/gondolier.svg?style=svg)](https://circleci.com/gh/DeKugelschieber/gondolier)
 
-**100% WIP, TODO:**
+**This library is WIP, TODO:**
 
 * ~~fancy name~~
-* test migration
-* more docs
 * package docs
+* readme
 * add postgres migrator
-* how to change table/column/sequence/... names? should it be supported?
+** ~~create schema~~
+** ~~update types, pk, sequences, default, not null, unique~~
+** update/drop fk constraints
+* ~~how to change table/column/sequence/... names? should it be supported?~~
 
 Gondolier is a library to auto migrate database schemas for Go using structs. Quick demo:
 
