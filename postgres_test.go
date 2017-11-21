@@ -12,19 +12,19 @@ type testUser struct {
 }
 
 type testPicture struct {
-	Id       uint64 `gondolier:"type:bigint;pk;id;notnull"`
+	Id       uint64 `gondolier:"type:bigint;id"`
 	FileName string `gondolier:"type:varchar(255);notnull"`
 }
 
 type testPost struct {
-	Id      uint64 `gondolier:"type:bigint;pk;id;notnull"`
+	Id      uint64 `gondolier:"type:bigint;id"`
 	Post    string `gondolier:"type:varchar(255);notnull"`
 	User    uint64 `gondolier:"type:bigint;fk:testUser.Id;notnull"`
 	Picture uint64 `gondolier:"type:bigint;fk:testPicture.Id;null"`
 }
 
 type testArticle struct {
-	Id            uint64   `gondolier:"type:bigint;pk;id;notnull"`
+	Id            uint64   `gondolier:"type:bigint;id"`
 	Filename      string   `gondolier:"type:varchar(255);notnull"`
 	Tags          []string `gondolier:"type:varchar(255)[]"`
 	Views         uint     `gondolier:"type:integer;notnull"`
@@ -36,16 +36,20 @@ type testArticle struct {
 }
 
 type testDropColumn struct {
-	Id uint64 `gondolier:"type:bigint;pk;id;notnull"`
+	Id uint64 `gondolier:"type:bigint;id"`
 }
 
 type testAddColumn struct {
-	Id        uint64 `gondolier:"type:bigint;pk;id;notnull"`
+	Id        uint64 `gondolier:"type:bigint;id"`
 	NewColumn string `gondolier:"type:varchar(255)"`
 }
 
 type testUpdateColumn struct {
 	Column string `gondolier:"type:varchar(255);default:'default';notnull;unique;pk"`
+}
+
+type testUpdateColumnSeq struct {
+	Column int `gondolier:"type:integer;seq:1,1,-,-,1;default:nextval(seq)"`
 }
 
 func TestPostgresCreateTable(t *testing.T) {
@@ -212,11 +216,38 @@ func TestPostgresUpdateColumnReduce(t *testing.T) {
 	// TODO
 }
 
+func TestPostgresUpdateColumnSeq(t *testing.T) {
+	testCleanDb()
+	t.Log("--- TestPostgresUpdateColumnSeq ---")
+
+	if _, err := testdb.Exec(`CREATE TABLE "test_update_column_seq"
+		("column" integer)`); err != nil {
+		t.Fatal(err)
+	}
+
+	postgres := &Postgres{Schema: "public", Log: true}
+	Use(testdb, postgres)
+	Model(testUpdateColumnSeq{})
+	Migrate()
+
+	if !postgres.sequenceExists("test_update_column_seq_column_seq") {
+		t.Fatal("Sequence must exist")
+	}
+}
+
+func TestPostgresUpdateColumnSeqReduce(t *testing.T) {
+	testCleanDb()
+	t.Log("--- TestPostgresUpdateColumnSeqReduce ---")
+
+	// TODO
+}
+
 func testCleanDb() {
 	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_post_id_seq"`)
 	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_user_id_seq"`)
 	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_picture_id_seq"`)
 	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_article_id_seq"`)
+	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_update_column_seq_column_seq"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_post"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_user"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_picture"`)
@@ -224,4 +255,5 @@ func testCleanDb() {
 	testdb.Exec(`DROP TABLE IF EXISTS "test_drop_column"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_add_column"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_update_column"`)
+	testdb.Exec(`DROP TABLE IF EXISTS "test_update_column_seq"`)
 }

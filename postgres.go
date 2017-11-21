@@ -229,7 +229,7 @@ func (m *Postgres) updateColumn(model *MetaModel, field *MetaField) {
 	tableName := naming.Get(model.ModelName)
 	columnName := naming.Get(field.Name)
 	notnull, isId, pk, unique := false, false, false, false
-	defaultValue := ""
+	defaultValue, seq := "", ""
 
 	for _, tag := range field.Tags {
 		key := strings.ToLower(tag.Name)
@@ -242,18 +242,23 @@ func (m *Postgres) updateColumn(model *MetaModel, field *MetaField) {
 		} else if key == "default" {
 			defaultValue = value
 		} else if value == "id" {
+			notnull = true
 			isId = true
+			pk = true
 		} else if value == "pk" || value == "primary key" {
 			pk = true
 		} else if value == "unique" {
 			unique = true
+		} else if key == "seq" || key == "sequence" {
+			seq = value
 		}
 	}
 
-	m.updateColumnNotNull(tableName, columnName, notnull)
-	m.updateColumnDefault(tableName, columnName, defaultValue, isId)
+	m.updateColumnSeq(tableName, columnName, seq)
 	m.updateColumnPK(tableName, columnName, pk)
 	m.updateColumnUnique(tableName, columnName, unique)
+	m.updateColumnNotNull(tableName, columnName, notnull)
+	m.updateColumnDefault(tableName, columnName, defaultValue, isId)
 }
 
 func (m *Postgres) updateColumnType(tableName, columnName, newtype string) {
@@ -291,6 +296,10 @@ func (m *Postgres) updateColumnDefault(tableName, columnName, value string, isId
 			m.alterSeq = make([]string, 0)
 			query = `ALTER TABLE "` + tableName + `" ALTER COLUMN "` + columnName + `" SET DEFAULT nextval('` + m.getSequenceName(tableName, columnName) + `'::regclass)`
 		} else {
+			if value == "nextval(seq)" {
+				value = "nextval('" + m.getSequenceName(tableName, columnName) + "'::regclass)"
+			}
+
 			query = `ALTER TABLE "` + tableName + `" ALTER COLUMN "` + columnName + `" SET DEFAULT ` + value
 		}
 	} else {
@@ -322,6 +331,23 @@ func (m *Postgres) updateColumnUnique(tableName, columnName string, unique bool)
 	}
 
 	m.exec(query)
+}
+
+func (m *Postgres) updateColumnSeq(tableName, columnName, seq string) {
+	seqName := m.getSequenceName(tableName, columnName)
+
+	if seq != "" && !m.sequenceExists(seqName) {
+		// create sequence
+		m.addSequence(tableName, columnName, seq)
+		m.exec(m.createSeq[0])
+		m.exec(m.alterSeq[0])
+		m.createSeq = make([]string, 0)
+		m.alterSeq = make([]string, 0)
+	} else if seq == "" && m.sequenceExists(seqName) {
+		// drop sequence
+		query := `DROP SEQUENCE IF EXISTS "` + seqName + `" CASCADE`
+		m.exec(query)
+	}
 }
 
 // Drops all columns that are no longer needed.
@@ -379,12 +405,13 @@ func (m *Postgres) getTags(modelName string, field *MetaField) string {
 			tags[2] = "NOT NULL"
 		} else if value == "null" {
 			tags[2] = "NULL"
-		} else if key == "seq" {
+		} else if key == "seq" || key == "sequence" {
 			m.addSequence(modelName, field.Name, value)
 		} else if value == "id" {
-			// id is a shortcut for seq + default
+			// id is a shortcut for seq + default + pk
 			m.addSequence(modelName, field.Name, "1,1,-,-,1")
 			tags[1] = "DEFAULT nextval('" + m.getSequenceName(modelName, field.Name) + "'::regclass)"
+			tags[3] = "PRIMARY KEY"
 		} else if value == "pk" || value == "primary key" {
 			tags[3] = "PRIMARY KEY"
 		} else if value == "unique" {
