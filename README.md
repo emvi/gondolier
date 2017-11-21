@@ -13,9 +13,9 @@
 * package docs
 * readme
 * add postgres migrator
-** ~~create schema~~
-** ~~update types, pk, sequences, default, not null, unique~~
-** update/drop fk constraints
+    - ~~create schema~~
+    - ~~update types, pk, sequences, default, not null, unique~~
+    - update/drop fk constraints
 * ~~how to change table/column/sequence/... names? should it be supported?~~
 
 Gondolier is a library to auto migrate database schemas for Go using structs. Quick demo:
