@@ -7,6 +7,8 @@
 [![GoDoc](https://godoc.org/github.com/DeKugelschieber/gondolier?status.svg)](https://godoc.org/github.com/DeKugelschieber/gondolier)
 [![CircleCI](https://circleci.com/gh/DeKugelschieber/gondolier.svg?style=svg)](https://circleci.com/gh/DeKugelschieber/gondolier)
 
+## Description
+
 **This library is WIP, TODO:**
 
 * ~~fancy name~~
@@ -24,7 +26,11 @@ Gondolier is a library to auto migrate database schemas for Go using structs. Qu
 // WIP
 ```
 
-## Features
+### Features
+
+*WIP*
+
+### Limits
 
 *WIP*
 
