@@ -8,7 +8,7 @@ type testUser struct {
 	Id      uint64 `gondolier:"type:bigint;pk;seq:1,1,-,-,1;default:nextval(seq);notnull"`
 	Name    string `gondolier:"type:varchar(255);notnull;unique"`
 	Age     uint   `gondolier:"type:integer;notnull"`
-	Picture uint64 `gondolier:"type:bigint;fk:testPicture.Id;null"`
+	Picture uint64 `gondolier:"type:bigint;fk:test_picture.id;null"`
 }
 
 type testPicture struct {
@@ -19,8 +19,8 @@ type testPicture struct {
 type testPost struct {
 	Id      uint64 `gondolier:"type:bigint;id"`
 	Post    string `gondolier:"type:varchar(255);notnull"`
-	User    uint64 `gondolier:"type:bigint;fk:testUser.Id;notnull"`
-	Picture uint64 `gondolier:"type:bigint;fk:testPicture.Id;null"`
+	User    uint64 `gondolier:"type:bigint;fk:test_user.id;notnull"`
+	Picture uint64 `gondolier:"type:bigint;fk:test_picture.id;null"`
 }
 
 type testArticle struct {
@@ -50,6 +50,10 @@ type testUpdateColumn struct {
 
 type testUpdateColumnSeq struct {
 	Column int `gondolier:"type:integer;seq:1,1,-,-,1;default:nextval(seq)"`
+}
+
+type testUpdateColumnFk struct {
+	Fk uint64 `gondolier:"type:bigint;fk:test_other.id"`
 }
 
 func TestPostgresCreateTable(t *testing.T) {
@@ -93,15 +97,15 @@ func TestPostgresCreateTable(t *testing.T) {
 		t.Fatal("Sequence must have been created: test_article_id_seq")
 	}
 
-	if !postgres.foreignKeyExists("test_user", "test_user_test_picture_fk") {
+	if !postgres.foreignKeyExists("test_user", "test_user_test_picture_id_fk") {
 		t.Fatal("Foreign key must have been created: test_user_test_picture_fk")
 	}
 
-	if !postgres.foreignKeyExists("test_post", "test_post_test_user_fk") {
+	if !postgres.foreignKeyExists("test_post", "test_post_test_user_id_fk") {
 		t.Fatal("Foreign key must have been created: test_post_test_user_fk")
 	}
 
-	if !postgres.foreignKeyExists("test_post", "test_post_test_picture_fk") {
+	if !postgres.foreignKeyExists("test_post", "test_post_test_picture_id_fk") {
 		t.Fatal("Foreign key must have been created: test_post_test_picture_fk")
 	}
 }
@@ -242,6 +246,37 @@ func TestPostgresUpdateColumnSeqReduce(t *testing.T) {
 	// TODO
 }
 
+func TestPostgresUpdateColumnFk(t *testing.T) {
+	testCleanDb()
+	t.Log("--- TestPostgresUpdateColumnFk ---")
+
+	if _, err := testdb.Exec(`CREATE TABLE "test_other"
+		("id" bigint unique)`); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := testdb.Exec(`CREATE TABLE "test_update_column_fk"
+		("fk" bigint)`); err != nil {
+		t.Fatal(err)
+	}
+
+	postgres := &Postgres{Schema: "public", Log: true}
+	Use(testdb, postgres)
+	Model(testUpdateColumnFk{})
+	Migrate()
+
+	if !postgres.constraintExists("test_update_column_fk_test_other_id_fk") {
+		t.Fatal("Foreign key must exist")
+	}
+}
+
+func TestPostgresUpdateColumnFkReduce(t *testing.T) {
+	testCleanDb()
+	t.Log("--- TestPostgresUpdateColumnFkReduce ---")
+
+	// TODO
+}
+
 func testCleanDb() {
 	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_post_id_seq"`)
 	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_user_id_seq"`)
@@ -256,4 +291,6 @@ func testCleanDb() {
 	testdb.Exec(`DROP TABLE IF EXISTS "test_add_column"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_update_column"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_update_column_seq"`)
+	testdb.Exec(`DROP TABLE IF EXISTS "test_update_column_fk"`)
+	testdb.Exec(`DROP TABLE IF EXISTS "test_other"`)
 }

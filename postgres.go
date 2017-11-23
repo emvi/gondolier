@@ -14,6 +14,7 @@ type Postgres struct {
 	createSeq []string
 	alterSeq  []string
 	createFK  []string
+	dropFK    []string
 }
 
 func (m *Postgres) Migrate(metaModels []MetaModel) {
@@ -28,16 +29,18 @@ func (m *Postgres) Migrate(metaModels []MetaModel) {
 	}
 
 	// drop foreign keys
-	// TODO
+	for _, fk := range m.dropFK {
+		m.exec(fk)
+	}
 
 	// reset
 	m.createFK = make([]string, 0)
+	m.dropFK = make([]string, 0)
 }
 
 func (m *Postgres) DropTable(name string) {
 	name = naming.Get(name)
-	query := `DROP TABLE IF EXISTS "` + name + `"`
-	m.exec(query)
+	m.exec(`DROP TABLE IF EXISTS "` + name + `"`)
 }
 
 func (m *Postgres) migrate(model *MetaModel) {
@@ -185,6 +188,34 @@ func (m *Postgres) getColumnType(tableName, columnName string) string {
 	return typeName
 }
 
+func (m *Postgres) getConstraintName(name string) string {
+	name = naming.Get(name)
+
+	rows, err := db.Query(`SELECT conname
+		FROM pg_constraint WHERE conname LIKE $1`, name)
+
+	if err != nil {
+		panic(err)
+	}
+
+	var constraintName string
+	one := false
+
+	for rows.Next() {
+		if err := rows.Scan(&constraintName); err != nil {
+			panic(err)
+		}
+
+		if one {
+			panic("No distinct constraint found for name '" + name + "'")
+		}
+
+		one = true
+	}
+
+	return constraintName
+}
+
 func (m *Postgres) createTable(model *MetaModel) {
 	name := naming.Get(model.ModelName)
 	sql := `CREATE TABLE IF NOT EXISTS "` + name + `" (` + m.getColumns(model) + `)`
@@ -229,7 +260,7 @@ func (m *Postgres) updateColumn(model *MetaModel, field *MetaField) {
 	tableName := naming.Get(model.ModelName)
 	columnName := naming.Get(field.Name)
 	notnull, isId, pk, unique := false, false, false, false
-	defaultValue, seq := "", ""
+	defaultValue, seq, fk := "", "", ""
 
 	for _, tag := range field.Tags {
 		key := strings.ToLower(tag.Name)
@@ -251,6 +282,8 @@ func (m *Postgres) updateColumn(model *MetaModel, field *MetaField) {
 			unique = true
 		} else if key == "seq" || key == "sequence" {
 			seq = value
+		} else if key == "fk" || key == "foreign key" {
+			fk = value
 		}
 	}
 
@@ -259,6 +292,7 @@ func (m *Postgres) updateColumn(model *MetaModel, field *MetaField) {
 	m.updateColumnUnique(tableName, columnName, unique)
 	m.updateColumnNotNull(tableName, columnName, notnull)
 	m.updateColumnDefault(tableName, columnName, defaultValue, isId)
+	m.updateColumnFk(tableName, columnName, fk)
 }
 
 func (m *Postgres) updateColumnType(tableName, columnName, newtype string) {
@@ -327,7 +361,7 @@ func (m *Postgres) updateColumnUnique(tableName, columnName string, unique bool)
 	if unique && !m.constraintExists(constraintName) {
 		query = `ALTER TABLE "` + tableName + `" ADD CONSTRAINT "` + constraintName + `" UNIQUE ("` + columnName + `")`
 	} else if !unique && m.constraintExists(constraintName) {
-		query = `ALTER TABLE "` + tableName + `" DROP CONSTRAINT "` + constraintName + `"`
+		query = `ALTER TABLE "` + tableName + `" DROP CONSTRAINT IF EXISTS "` + constraintName + `"`
 	}
 
 	m.exec(query)
@@ -347,6 +381,25 @@ func (m *Postgres) updateColumnSeq(tableName, columnName, seq string) {
 		// drop sequence
 		query := `DROP SEQUENCE IF EXISTS "` + seqName + `" CASCADE`
 		m.exec(query)
+	}
+}
+
+func (m *Postgres) updateColumnFk(tableName, columnName, fk string) {
+	// read existing fk
+	refTableName, refColumnName := m.getForeignKeyInfo(tableName, fk)
+	fkName := m.getForeignKeyName(tableName, refTableName, refColumnName)
+	existingFk := m.getConstraintName(tableName + "_%_fk")
+
+	if fkName != existingFk {
+		// drop on change or when it was removed if exists
+		if existingFk != "" {
+			m.dropFK = append(m.dropFK, `ALTER TABLE "`+tableName+`" DROP CONSTRAINT IF EXISTS "`+existingFk+`"`)
+		}
+
+		// create new
+		if fk != "" {
+			m.addForeignKey(tableName, columnName, fk)
+		}
 	}
 }
 
@@ -481,17 +534,10 @@ func (m *Postgres) getSequenceName(modelName, columnName string) string {
 }
 
 func (m *Postgres) addForeignKey(modelName, columnName, info string) {
-	infos := strings.Split(info, ".")
-
-	if len(infos) != 2 {
-		panic("Two arguments must be specified for fk in model '" + modelName + "': ReferencedModel.ReferencedAttribute")
-	}
-
+	refTableName, refColumnName := m.getForeignKeyInfo(modelName, info)
 	tableName := naming.Get(modelName)
 	columnName = naming.Get(columnName)
-	refTableName := naming.Get(infos[0])
-	refColumnName := naming.Get(infos[1])
-	fkName := m.getForeignKeyName(modelName, infos[0])
+	fkName := m.getForeignKeyName(modelName, refTableName, refColumnName)
 	alterFk := `ALTER TABLE "` + tableName + `"
 		ADD CONSTRAINT "` + fkName + `"
 		FOREIGN KEY ("` + columnName + `")
@@ -499,10 +545,25 @@ func (m *Postgres) addForeignKey(modelName, columnName, info string) {
 	m.createFK = append(m.createFK, alterFk)
 }
 
-func (m *Postgres) getForeignKeyName(modelName, refObjName string) string {
+func (m *Postgres) getForeignKeyInfo(modelName, info string) (string, string) {
+	if info == "" {
+		return "", ""
+	}
+
+	infos := strings.Split(info, ".")
+
+	if len(infos) != 2 {
+		panic("Two arguments must be specified for fk in model '" + modelName + "': ReferencedModel.ReferencedAttribute")
+	}
+
+	return naming.Get(infos[0]), naming.Get(infos[1])
+}
+
+func (m *Postgres) getForeignKeyName(modelName, refObjName, refColumnName string) string {
 	modelName = naming.Get(modelName)
 	refObjName = naming.Get(refObjName)
-	return modelName + "_" + refObjName + "_fk"
+	refColumnName = naming.Get(refColumnName)
+	return modelName + "_" + refObjName + "_" + refColumnName + "_fk"
 }
 
 func (m *Postgres) exec(query string) {
