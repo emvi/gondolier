@@ -48,12 +48,24 @@ type testUpdateColumn struct {
 	Column string `gondolier:"type:varchar(255);default:'default';notnull;unique;pk"`
 }
 
+type testUpdateColumnReduce struct {
+	Column string `gondolier:"type:text"`
+}
+
 type testUpdateColumnSeq struct {
 	Column int `gondolier:"type:integer;seq:1,1,-,-,1;default:nextval(seq)"`
 }
 
+type testUpdateColumnSeqReduce struct {
+	Column int `gondolier:"type:integer"`
+}
+
 type testUpdateColumnFk struct {
 	Fk uint64 `gondolier:"type:bigint;fk:test_other.id"`
+}
+
+type testUpdateColumnFkReduce struct {
+	Fk uint64 `gondolier:"type:bigint"`
 }
 
 func TestPostgresCreateTable(t *testing.T) {
@@ -217,7 +229,27 @@ func TestPostgresUpdateColumnReduce(t *testing.T) {
 	testCleanDb()
 	t.Log("--- TestPostgresUpdateColumnReduce ---")
 
-	// TODO
+	if _, err := testdb.Exec(`CREATE TABLE "test_update_column_reduce"
+		("column" text NOT NULL PRIMARY KEY UNIQUE)`); err != nil {
+		t.Fatal(err)
+	}
+
+	postgres := &Postgres{Schema: "public", Log: true}
+	Use(testdb, postgres)
+	Model(testUpdateColumnReduce{})
+	Migrate()
+
+	if !postgres.isNullable("test_update_column_reduce", "column") {
+		t.Fatal("Column must be nullable")
+	}
+
+	if postgres.constraintExists("test_update_column_reduce_pkey") {
+		t.Fatal("Primary key constraint must not exist")
+	}
+
+	if postgres.constraintExists("test_update_column_column_reduce_unique") {
+		t.Fatal("Unique constraint must not exist")
+	}
 }
 
 func TestPostgresUpdateColumnSeq(t *testing.T) {
@@ -243,7 +275,29 @@ func TestPostgresUpdateColumnSeqReduce(t *testing.T) {
 	testCleanDb()
 	t.Log("--- TestPostgresUpdateColumnSeqReduce ---")
 
-	// TODO
+	if _, err := testdb.Exec(`CREATE SEQUENCE "test_update_column_seq_reduce_column_seq"
+		START WITH 1 INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1`); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := testdb.Exec(`CREATE TABLE "test_update_column_seq_reduce"
+		("column" integer DEFAULT nextval('test_update_column_seq_reduce_column_seq'::regclass))`); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := testdb.Exec(`ALTER SEQUENCE "test_update_column_seq_reduce_column_seq"
+		OWNED BY "test_update_column_seq_reduce"."column"`); err != nil {
+		t.Fatal(err)
+	}
+
+	postgres := &Postgres{Schema: "public", Log: true}
+	Use(testdb, postgres)
+	Model(testUpdateColumnSeqReduce{})
+	Migrate()
+
+	if postgres.sequenceExists("test_update_column_seq_reduce_column_seq") {
+		t.Fatal("Sequence must not exist")
+	}
 }
 
 func TestPostgresUpdateColumnFk(t *testing.T) {
@@ -274,7 +328,24 @@ func TestPostgresUpdateColumnFkReduce(t *testing.T) {
 	testCleanDb()
 	t.Log("--- TestPostgresUpdateColumnFkReduce ---")
 
-	// TODO
+	if _, err := testdb.Exec(`CREATE TABLE "test_other"
+		("id" bigint unique)`); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := testdb.Exec(`CREATE TABLE "test_update_column_fk_reduce"
+		("fk" bigint REFERENCES "test_other"("id"))`); err != nil {
+		t.Fatal(err)
+	}
+
+	postgres := &Postgres{Schema: "public", Log: true}
+	Use(testdb, postgres)
+	Model(testUpdateColumnFkReduce{})
+	Migrate()
+
+	if postgres.constraintExists("test_update_column_fk_reduce_test_other_id_fk") {
+		t.Fatal("Foreign key must not exist")
+	}
 }
 
 func testCleanDb() {
@@ -283,6 +354,7 @@ func testCleanDb() {
 	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_picture_id_seq"`)
 	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_article_id_seq"`)
 	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_update_column_seq_column_seq"`)
+	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_update_column_seq_reduce_column_seq"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_post"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_user"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_picture"`)
@@ -290,7 +362,10 @@ func testCleanDb() {
 	testdb.Exec(`DROP TABLE IF EXISTS "test_drop_column"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_add_column"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_update_column"`)
+	testdb.Exec(`DROP TABLE IF EXISTS "test_update_column_reduce"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_update_column_seq"`)
+	testdb.Exec(`DROP TABLE IF EXISTS "test_update_column_seq_reduce"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_update_column_fk"`)
+	testdb.Exec(`DROP TABLE IF EXISTS "test_update_column_fk_reduce"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_other"`)
 }
