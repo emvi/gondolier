@@ -1,3 +1,5 @@
-// Gondolier is a database migration library for Go.
-// TODO add more description
+// Gondolier is a library to auto migrate database schemas for Go using structs.
+//
+// Quick example:
+// // TODO
 package gondolier

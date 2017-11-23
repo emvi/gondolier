@@ -6,6 +6,39 @@ import (
 	"strings"
 )
 
+// Migrator for Postgres databases.
+// You can use the following options to configure your data model:
+//
+// // type:database type
+// The type must be the database type.
+//
+// // pk/primary key
+// Sets the column as primary key.
+//
+// // seq:start,increment,minvalue,maxvalue,cache
+// Creates and sets a sequence with given parameters for the column.
+//
+// // default:default value/next(seq)
+// Sets the default value for column, strings must be escaped.
+// next(seq) refers to the sequences assign for this column (using seq:...).
+//
+// // not null/notnull
+// Sets not null constraint for column.
+//
+// // null
+// Optional. Drops not null constraint if set for column.
+// Not null is also dropped if not null is not set.
+//
+// // unique
+// Sets unique constraint for column.
+//
+// // id
+// Shortcut for primary key, not null, seq:1,1,-,-,1 and default:next(seq).
+//
+// // fk/foreign key:Model.Column
+// // Example: fk:MyModel.Id
+// Sets foreign key constraint for column.
+// It refers to the given model and column.
 type Postgres struct {
 	Schema      string
 	DropColumns bool
@@ -270,6 +303,8 @@ func (m *Postgres) updateColumn(model *MetaModel, field *MetaField) {
 			m.updateColumnType(tableName, columnName, value)
 		} else if value == "notnull" || value == "not null" {
 			notnull = true
+		} else if value == "null" {
+			notnull = false
 		} else if key == "default" {
 			defaultValue = value
 		} else if value == "id" {
