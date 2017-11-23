@@ -7,9 +7,9 @@ import (
 // Naming for snake case.
 //
 // Example:
-// // Model -> model
-// // MyModel -> my_model
-// // SOMEModel -> some_model
+//  Model -> model
+//  MyModel -> my_model
+//  SOMEModel -> some_model
 type SnakeCase struct{}
 
 func (n *SnakeCase) Get(name string) string {

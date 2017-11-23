@@ -30,7 +30,7 @@ func Use(conn *sql.DB, m Migrator) {
 // Sets the naming used for migration. Default is snake case.
 //
 // Example:
-// // Naming(SnakeCase)
+//  Naming(SnakeCase)
 func Naming(schema NameSchema) {
 	if schema == nil {
 		panic("Name schema must not be nil")
@@ -44,7 +44,7 @@ func Naming(schema NameSchema) {
 // This function might panic if an invalid model is passed.
 //
 // Example:
-// // Model(&MyModel{}, AnotherModel{})
+//  Model(&MyModel{}, AnotherModel{})
 func Model(models ...interface{}) {
 	for _, model := range models {
 		if !modelExists(model) {
@@ -57,9 +57,9 @@ func Model(models ...interface{}) {
 // The database connection and migrator must be set.
 //
 // Example:
-// // Use(Postgres)
-// // Model(MyModel{}, AnotherModel{})
-// // Migrate()
+//  Use(Postgres)
+//  Model(MyModel{}, AnotherModel{})
+//  Migrate()
 func Migrate() {
 	checkSetup()
 	migrator.Migrate(metaModels)
@@ -72,7 +72,7 @@ func Migrate() {
 // This function might panic if an invalid model is passed or the tables cannot be dropped.
 //
 // Example:
-// // Drop(&MyModel{}, AnotherModel{})
+//  Drop(&MyModel{}, AnotherModel{})
 func Drop(models ...interface{}) {
 	checkSetup()
 

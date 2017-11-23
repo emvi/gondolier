@@ -9,34 +9,34 @@ import (
 // Migrator for Postgres databases.
 // You can use the following options to configure your data model:
 //
-// // type:database type
+//  type:database type
 // The type must be the database type.
 //
-// // pk/primary key
+//  pk/primary key
 // Sets the column as primary key.
 //
-// // seq:start,increment,minvalue,maxvalue,cache
+//  seq:start,increment,minvalue,maxvalue,cache
 // Creates and sets a sequence with given parameters for the column.
 //
-// // default:default value/next(seq)
+//  default:default value/next(seq)
 // Sets the default value for column, strings must be escaped.
 // next(seq) refers to the sequences assign for this column (using seq:...).
 //
-// // not null/notnull
+//  not null/notnull
 // Sets not null constraint for column.
 //
-// // null
+//  null
 // Optional. Drops not null constraint if set for column.
 // Not null is also dropped if not null is not set.
 //
-// // unique
+//  unique
 // Sets unique constraint for column.
 //
-// // id
+//  id
 // Shortcut for primary key, not null, seq:1,1,-,-,1 and default:next(seq).
 //
-// // fk/foreign key:Model.Column
-// // Example: fk:MyModel.Id
+//  fk/foreign key:Model.Column
+//  Example: fk:MyModel.Id
 // Sets foreign key constraint for column.
 // It refers to the given model and column.
 type Postgres struct {
