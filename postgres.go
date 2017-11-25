@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// Migrator for Postgres databases.
+// Postgres migrator for Postgres databases.
 // You can use the following options to configure your data model:
 //
 //  // The type must be the database type.
@@ -42,6 +42,7 @@ type Postgres struct {
 	alterPK   string
 }
 
+// Migrate migrates the given data model.
 func (m *Postgres) Migrate(metaModels []MetaModel) {
 	// create or update table
 	for _, model := range metaModels {
@@ -63,6 +64,7 @@ func (m *Postgres) Migrate(metaModels []MetaModel) {
 	m.dropFK = make([]string, 0)
 }
 
+// DropTable drops the given table.
 func (m *Postgres) DropTable(name string) {
 	name = naming.Get(name)
 	m.exec(`DROP TABLE IF EXISTS "` + name + `"`)

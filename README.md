@@ -6,6 +6,7 @@
 
 [![GoDoc](https://godoc.org/github.com/emvicom/gondolier?status.svg)](https://godoc.org/github.com/emvicom/gondolier)
 [![CircleCI](https://circleci.com/gh/emvicom/gondolier.svg?style=svg)](https://circleci.com/gh/emvicom/gondolier)
+[![Go Report Card](https://goreportcard.com/badge/github.com/emvicom/gondolier)](https://goreportcard.com/report/github.com/emvicom/gondolier)
 
 ## Description
 

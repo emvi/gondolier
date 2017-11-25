@@ -4,7 +4,7 @@ import (
 	"unicode"
 )
 
-// Naming for snake case.
+// SnakeCase translates model names to schema names in snake case.
 //
 // Example:
 //  Model -> model

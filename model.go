@@ -6,22 +6,22 @@ import (
 )
 
 const (
-	tag_name = "gondolier"
+	tagname = "gondolier"
 )
 
-// A meta model is the description of a model for migration.
+// MetaModel is the description of a model for migration.
 type MetaModel struct {
 	ModelName string
 	Fields    []MetaField
 }
 
-// A meta field is the description of one field of a model for migration.
+// MetaField is the description of one field of a model for migration.
 type MetaField struct {
 	Name string
 	Tags []MetaTag
 }
 
-// A meta tag is the description of a tag for a model field.
+// MetaTag is the description of a tag for a model field.
 type MetaTag struct {
 	Name  string
 	Value string
@@ -47,9 +47,9 @@ func getModelName(model interface{}) string {
 
 	if t.Kind() == reflect.Ptr {
 		return t.Elem().Name()
-	} else {
-		return t.Name()
 	}
+
+	return t.Name()
 }
 
 func getModelFields(model interface{}) []MetaField {
@@ -63,7 +63,7 @@ func getModelFields(model interface{}) []MetaField {
 
 	for i := 0; i < val.NumField(); i++ {
 		field := val.Type().Field(i)
-		tag := field.Tag.Get(tag_name)
+		tag := field.Tag.Get(tagname)
 		kind := field.Type.Kind()
 
 		if tag == "" || tag == "-" {

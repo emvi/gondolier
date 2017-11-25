@@ -12,22 +12,24 @@ var (
 	metaModels = make([]MetaModel, 0)
 )
 
+// Interface used to migrate a database schema from model.
 type Migrator interface {
 	Migrate([]MetaModel)
 	DropTable(string)
 }
 
+// Interface used to translate model names to schema names.
 type NameSchema interface {
 	Get(string) string
 }
 
-// Sets the database connection and migrator used for migration.
+// Use sets the database connection and migrator used for migration.
 func Use(conn *sql.DB, m Migrator) {
 	db = conn
 	migrator = m
 }
 
-// Sets the naming used for migration. Default is snake case.
+// Naming sets the naming used for migration. Default is snake case.
 //
 // Example:
 //  Naming(SnakeCase)
@@ -39,7 +41,7 @@ func Naming(schema NameSchema) {
 	naming = schema
 }
 
-// Adds one or more models for migration.
+// Model adds one or more models for migration.
 // Can be passed as references to a structs or the structs directly or mixed.
 // This function might panic if an invalid model is passed.
 //
@@ -53,7 +55,7 @@ func Model(models ...interface{}) {
 	}
 }
 
-// Migrates models added previously using Model().
+// Migrate migrates models added previously using Model().
 // The database connection and migrator must be set.
 //
 // Example:
@@ -66,7 +68,7 @@ func Migrate() {
 	reset()
 }
 
-// Drops tables for given models if exists.
+// Drop drops tables for given models if exists.
 // The database connection and migrator must be set.
 // Can be passed as references to a structs or the structs directly or mixed.
 // This function might panic if an invalid model is passed or the tables cannot be dropped.
