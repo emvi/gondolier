@@ -9,36 +9,18 @@ import (
 // Migrator for Postgres databases.
 // You can use the following options to configure your data model:
 //
-//  type:database type
-// The type must be the database type.
-//
-//  pk/primary key
-// Sets the column as primary key.
-//
-//  seq:start,increment,minvalue,maxvalue,cache
-// Creates and sets a sequence with given parameters for the column.
-//
-//  default:default value/next(seq)
-// Sets the default value for column, strings must be escaped.
-// next(seq) refers to the sequences assign for this column (using seq:...).
-//
-//  not null/notnull
-// Sets not null constraint for column.
-//
-//  null
-// Optional. Drops not null constraint if set for column.
-// Not null is also dropped if not null is not set.
-//
-//  unique
-// Sets unique constraint for column.
-//
-//  id
-// Shortcut for primary key, not null, seq:1,1,-,-,1 and default:next(seq).
-//
-//  fk/foreign key:Model.Column
-//  Example: fk:MyModel.Id
-// Sets foreign key constraint for column.
-// It refers to the given model and column.
+//  type:database type // The type must be the database type.
+//  pk/primary key // Sets the column as primary key.
+//  seq:start,increment,minvalue,maxvalue,cache // Creates and sets a sequence with given parameters for the column.
+//  default:default value/next(seq) // Sets the default value for column, strings must be escaped.
+//  next(seq) refers to the sequences assign for this column (using seq:...).
+//  not null/notnull // Sets not null constraint for column.
+//  null // Optional. Drops not null constraint if set for column. Not null is also dropped if not null is not set.
+//  unique // Sets unique constraint for column.
+//  id // Shortcut for primary key, not null, seq:1,1,-,-,1 and default:next(seq).
+//  // Sets foreign key constraint for column.
+//  // It refers to the given model and column.
+//  fk/foreign key:Model.Column //  Example: fk:MyModel.Id
 type Postgres struct {
 	Schema      string
 	DropColumns bool
@@ -48,6 +30,7 @@ type Postgres struct {
 	alterSeq  []string
 	createFK  []string
 	dropFK    []string
+	alterPK   string
 }
 
 func (m *Postgres) Migrate(metaModels []MetaModel) {
@@ -170,6 +153,7 @@ func (m *Postgres) scanBool(rows *sql.Rows, err error) bool {
 		panic(err)
 	}
 
+	m.closeRows(rows)
 	return exists
 }
 
@@ -197,6 +181,7 @@ func (m *Postgres) getColumnNames(tableName string) []string {
 		names = append(names, name)
 	}
 
+	m.closeRows(rows)
 	return names
 }
 
@@ -218,6 +203,7 @@ func (m *Postgres) getColumnType(tableName, columnName string) string {
 		panic(err)
 	}
 
+	m.closeRows(rows)
 	return typeName
 }
 
@@ -246,7 +232,14 @@ func (m *Postgres) getConstraintName(name string) string {
 		one = true
 	}
 
+	m.closeRows(rows)
 	return constraintName
+}
+
+func (m *Postgres) closeRows(rows *sql.Rows) {
+	if err := rows.Close(); err != nil {
+		panic(err)
+	}
 }
 
 func (m *Postgres) createTable(model *MetaModel) {
@@ -266,15 +259,18 @@ func (m *Postgres) createTable(model *MetaModel) {
 		m.exec(seq)
 	}
 
+	// alter primary key if required
+	if m.alterPK != "" {
+		m.exec(m.alterPK)
+	}
+
 	// reset
 	m.createSeq = make([]string, 0)
 	m.alterSeq = make([]string, 0)
+	m.alterPK = ""
 }
 
 func (m *Postgres) updateTable(model *MetaModel) {
-	tableName := naming.Get(model.ModelName)
-	m.exec(`ALTER TABLE "` + tableName + `" DROP CONSTRAINT IF EXISTS "` + tableName + `_pkey"`)
-
 	for _, field := range model.Fields {
 		if m.columnExists(model.ModelName, field.Name) {
 			// update existing column
@@ -322,7 +318,7 @@ func (m *Postgres) updateColumn(model *MetaModel, field *MetaField) {
 		}
 	}
 
-	m.updateColumnSeq(tableName, columnName, seq)
+	m.updateColumnSeq(tableName, columnName, seq, isId)
 	m.updateColumnPK(tableName, columnName, pk)
 	m.updateColumnUnique(tableName, columnName, unique)
 	m.updateColumnNotNull(tableName, columnName, notnull)
@@ -380,18 +376,18 @@ func (m *Postgres) updateColumnDefault(tableName, columnName, value string, isId
 }
 
 func (m *Postgres) updateColumnPK(tableName, columnName string, pk bool) {
-	if !pk {
-		return
-	}
+	pkName := m.getPrimaryKeyName(tableName, columnName)
 
-	if !m.constraintExists(tableName + "_pkey") {
+	if !pk && m.constraintExists(pkName) {
+		m.exec(`ALTER TABLE "` + tableName + `" DROP CONSTRAINT IF EXISTS "` + pkName + `"`)
+	} else if pk && !m.constraintExists(pkName) {
 		m.exec(`ALTER TABLE "` + tableName + `" ADD PRIMARY KEY ("` + columnName + `")`)
 	}
 }
 
 func (m *Postgres) updateColumnUnique(tableName, columnName string, unique bool) {
 	query := ""
-	constraintName := tableName + "_" + columnName + "_unique"
+	constraintName := m.getUniqueName(tableName, columnName)
 
 	if unique && !m.constraintExists(constraintName) {
 		query = `ALTER TABLE "` + tableName + `" ADD CONSTRAINT "` + constraintName + `" UNIQUE ("` + columnName + `")`
@@ -402,7 +398,11 @@ func (m *Postgres) updateColumnUnique(tableName, columnName string, unique bool)
 	m.exec(query)
 }
 
-func (m *Postgres) updateColumnSeq(tableName, columnName, seq string) {
+func (m *Postgres) updateColumnSeq(tableName, columnName, seq string, isId bool) {
+	if isId {
+		return
+	}
+
 	seqName := m.getSequenceName(tableName, columnName)
 
 	if seq != "" && !m.sequenceExists(seqName) {
@@ -500,8 +500,10 @@ func (m *Postgres) getTags(modelName string, field *MetaField) string {
 			m.addSequence(modelName, field.Name, "1,1,-,-,1")
 			tags[1] = "DEFAULT nextval('" + m.getSequenceName(modelName, field.Name) + "'::regclass)"
 			tags[3] = "PRIMARY KEY"
+			m.alterPrimaryKey(modelName, field.Name)
 		} else if value == "pk" || value == "primary key" {
 			tags[3] = "PRIMARY KEY"
+			m.alterPrimaryKey(modelName, field.Name)
 		} else if value == "unique" {
 			tags[4] = "UNIQUE"
 		} else if key == "fk" || key == "foreign key" {
@@ -562,6 +564,13 @@ func (m *Postgres) addSequence(modelName, columnName, info string) {
 	m.alterSeq = append(m.alterSeq, alterSeq)
 }
 
+func (m *Postgres) alterPrimaryKey(modelName, columnName string) {
+	tableName := naming.Get(modelName)
+	m.alterPK = `ALTER TABLE "` + tableName + `"
+		RENAME CONSTRAINT "` + tableName + `_pkey"
+		TO "` + m.getPrimaryKeyName(modelName, columnName) + `"`
+}
+
 func (m *Postgres) getSequenceName(modelName, columnName string) string {
 	modelName = naming.Get(modelName)
 	columnName = naming.Get(columnName)
@@ -599,6 +608,18 @@ func (m *Postgres) getForeignKeyName(modelName, refObjName, refColumnName string
 	refObjName = naming.Get(refObjName)
 	refColumnName = naming.Get(refColumnName)
 	return modelName + "_" + refObjName + "_" + refColumnName + "_fk"
+}
+
+func (m *Postgres) getPrimaryKeyName(modelName, columnName string) string {
+	modelName = naming.Get(modelName)
+	columnName = naming.Get(columnName)
+	return modelName + "_" + columnName + "_pkey"
+}
+
+func (m *Postgres) getUniqueName(modelName, columnName string) string {
+	modelName = naming.Get(modelName)
+	columnName = naming.Get(columnName)
+	return modelName + "_" + columnName + "_key"
 }
 
 func (m *Postgres) exec(query string) {

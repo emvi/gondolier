@@ -220,7 +220,7 @@ func TestPostgresUpdateColumn(t *testing.T) {
 		t.Fatal("Primary key constraint must exist")
 	}
 
-	if !postgres.constraintExists("test_update_column_column_unique") {
+	if !postgres.constraintExists("test_update_column_column_key") {
 		t.Fatal("Unique constraint must exist")
 	}
 }
@@ -231,6 +231,12 @@ func TestPostgresUpdateColumnReduce(t *testing.T) {
 
 	if _, err := testdb.Exec(`CREATE TABLE "test_update_column_reduce"
 		("column" text NOT NULL PRIMARY KEY UNIQUE)`); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := testdb.Exec(`ALTER TABLE "test_update_column_reduce"
+				RENAME CONSTRAINT "test_update_column_reduce_pkey"
+				TO "test_update_column_reduce_column_pkey"`); err != nil {
 		t.Fatal(err)
 	}
 
@@ -348,13 +354,22 @@ func TestPostgresUpdateColumnFkReduce(t *testing.T) {
 	}
 }
 
+func TestPostgresDontDropPk(t *testing.T) {
+	testCleanDb()
+	t.Log("--- TestPostgresDontDropPk ---")
+
+	postgres := &Postgres{Schema: "public", Log: true}
+	Use(testdb, postgres)
+	Model(testUser{}, testPost{}, testPicture{}, testArticle{})
+	Migrate()
+
+	t.Log("------------------------------")
+
+	Model(testUser{}, testPost{}, testPicture{}, testArticle{})
+	Migrate()
+}
+
 func testCleanDb() {
-	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_post_id_seq"`)
-	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_user_id_seq"`)
-	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_picture_id_seq"`)
-	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_article_id_seq"`)
-	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_update_column_seq_column_seq"`)
-	testdb.Exec(`DROP SEQUENCE IF EXISTS "test_update_column_seq_reduce_column_seq"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_post"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_user"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_picture"`)
