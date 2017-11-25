@@ -109,15 +109,15 @@ func TestPostgresCreateTable(t *testing.T) {
 		t.Fatal("Sequence must have been created: test_article_id_seq")
 	}
 
-	if !postgres.foreignKeyExists("test_user", "test_user_test_picture_id_fk") {
+	if !postgres.foreignKeyExists("test_user", "test_user_picture_test_picture_id_fk") {
 		t.Fatal("Foreign key must have been created: test_user_test_picture_fk")
 	}
 
-	if !postgres.foreignKeyExists("test_post", "test_post_test_user_id_fk") {
+	if !postgres.foreignKeyExists("test_post", "test_post_user_test_user_id_fk") {
 		t.Fatal("Foreign key must have been created: test_post_test_user_fk")
 	}
 
-	if !postgres.foreignKeyExists("test_post", "test_post_test_picture_id_fk") {
+	if !postgres.foreignKeyExists("test_post", "test_post_picture_test_picture_id_fk") {
 		t.Fatal("Foreign key must have been created: test_post_test_picture_fk")
 	}
 }
@@ -325,7 +325,7 @@ func TestPostgresUpdateColumnFk(t *testing.T) {
 	Model(testUpdateColumnFk{})
 	Migrate()
 
-	if !postgres.constraintExists("test_update_column_fk_test_other_id_fk") {
+	if !postgres.constraintExists("test_update_column_fk_fk_test_other_id_fk") {
 		t.Fatal("Foreign key must exist")
 	}
 }
@@ -349,7 +349,7 @@ func TestPostgresUpdateColumnFkReduce(t *testing.T) {
 	Model(testUpdateColumnFkReduce{})
 	Migrate()
 
-	if postgres.constraintExists("test_update_column_fk_reduce_test_other_id_fk") {
+	if postgres.constraintExists("test_update_column_fk_reduce_fk_test_other_id_fk") {
 		t.Fatal("Foreign key must not exist")
 	}
 }

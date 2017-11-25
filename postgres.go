@@ -422,8 +422,8 @@ func (m *Postgres) updateColumnSeq(tableName, columnName, seq string, isId bool)
 func (m *Postgres) updateColumnFk(tableName, columnName, fk string) {
 	// read existing fk
 	refTableName, refColumnName := m.getForeignKeyInfo(tableName, fk)
-	fkName := m.getForeignKeyName(tableName, refTableName, refColumnName)
-	existingFk := m.getConstraintName(tableName + "_%_fk")
+	fkName := m.getForeignKeyName(tableName, columnName, refTableName, refColumnName)
+	existingFk := m.getConstraintName(tableName + "_" + columnName + "_%_fk")
 
 	if fkName != existingFk {
 		// drop on change or when it was removed if exists
@@ -581,7 +581,7 @@ func (m *Postgres) addForeignKey(modelName, columnName, info string) {
 	refTableName, refColumnName := m.getForeignKeyInfo(modelName, info)
 	tableName := naming.Get(modelName)
 	columnName = naming.Get(columnName)
-	fkName := m.getForeignKeyName(modelName, refTableName, refColumnName)
+	fkName := m.getForeignKeyName(modelName, columnName, refTableName, refColumnName)
 	alterFk := `ALTER TABLE "` + tableName + `"
 		ADD CONSTRAINT "` + fkName + `"
 		FOREIGN KEY ("` + columnName + `")
@@ -603,11 +603,11 @@ func (m *Postgres) getForeignKeyInfo(modelName, info string) (string, string) {
 	return naming.Get(infos[0]), naming.Get(infos[1])
 }
 
-func (m *Postgres) getForeignKeyName(modelName, refObjName, refColumnName string) string {
+func (m *Postgres) getForeignKeyName(modelName, columnName, refObjName, refColumnName string) string {
 	modelName = naming.Get(modelName)
 	refObjName = naming.Get(refObjName)
 	refColumnName = naming.Get(refColumnName)
-	return modelName + "_" + refObjName + "_" + refColumnName + "_fk"
+	return modelName + "_" + columnName + "_" + refObjName + "_" + refColumnName + "_fk"
 }
 
 func (m *Postgres) getPrimaryKeyName(modelName, columnName string) string {
