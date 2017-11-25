@@ -8,7 +8,7 @@ type testUser struct {
 	Id      uint64 `gondolier:"type:bigint;pk;seq:1,1,-,-,1;default:nextval(seq);notnull"`
 	Name    string `gondolier:"type:varchar(255);notnull;unique"`
 	Age     uint   `gondolier:"type:integer;notnull"`
-	Picture uint64 `gondolier:"type:bigint;fk:test_picture.id;null"`
+	Picture uint64 `gondolier:"type:bigint;fk:testPicture.Id;null"`
 }
 
 type testPicture struct {
@@ -19,8 +19,8 @@ type testPicture struct {
 type testPost struct {
 	Id      uint64 `gondolier:"type:bigint;id"`
 	Post    string `gondolier:"type:varchar(255);notnull"`
-	User    uint64 `gondolier:"type:bigint;fk:test_user.id;notnull"`
-	Picture uint64 `gondolier:"type:bigint;fk:test_picture.id;null"`
+	User    uint64 `gondolier:"type:bigint;fk:testUser.Id;notnull"`
+	Picture uint64 `gondolier:"type:bigint;fk:testPicture.Id;null"`
 }
 
 type testArticle struct {
@@ -61,7 +61,7 @@ type testUpdateColumnSeqReduce struct {
 }
 
 type testUpdateColumnFk struct {
-	Fk uint64 `gondolier:"type:bigint;fk:test_other.id"`
+	Fk uint64 `gondolier:"type:bigint;fk:testOther.Id"`
 }
 
 type testUpdateColumnFkReduce struct {

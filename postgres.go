@@ -9,18 +9,27 @@ import (
 // Migrator for Postgres databases.
 // You can use the following options to configure your data model:
 //
-//  type:database type // The type must be the database type.
-//  pk/primary key // Sets the column as primary key.
-//  seq:start,increment,minvalue,maxvalue,cache // Creates and sets a sequence with given parameters for the column.
-//  default:default value/next(seq) // Sets the default value for column, strings must be escaped.
-//  next(seq) refers to the sequences assign for this column (using seq:...).
-//  not null/notnull // Sets not null constraint for column.
-//  null // Optional. Drops not null constraint if set for column. Not null is also dropped if not null is not set.
-//  unique // Sets unique constraint for column.
-//  id // Shortcut for primary key, not null, seq:1,1,-,-,1 and default:next(seq).
+//  // The type must be the database type.
+//  type:database type
+//  // Sets the column as primary key.
+//  pk/primary key
+//  // Creates and sets a sequence with given parameters for the column.
+//  seq:start,increment,minvalue,maxvalue,cache
+//  // Sets the default value for column, strings must be escaped.
+//  // next(seq) refers to the sequences assign for this column (using seq:...).
+//  default:default value/next(seq)
+//  // Sets not null constraint for column.
+//  not null/notnull
+//  // Optional. Drops not null constraint if set for column. Not null is also dropped if not null is not set.
+//  null
+//  // Sets unique constraint for column.
+//  unique
+//  // Shortcut for primary key, not null, seq:1,1,-,-,1 and default:next(seq).
+//  id
 //  // Sets foreign key constraint for column.
 //  // It refers to the given model and column.
-//  fk/foreign key:Model.Column //  Example: fk:MyModel.Id
+//  // Example: fk:MyModel.Id
+//  fk/foreign key:Model.Column
 type Postgres struct {
 	Schema      string
 	DropColumns bool
@@ -314,7 +323,7 @@ func (m *Postgres) updateColumn(model *MetaModel, field *MetaField) {
 		} else if key == "seq" || key == "sequence" {
 			seq = value
 		} else if key == "fk" || key == "foreign key" {
-			fk = value
+			fk = tag.Value
 		}
 	}
 
