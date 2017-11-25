@@ -12,6 +12,7 @@ import (
 //  SOMEModel -> some_model
 type SnakeCase struct{}
 
+// Get returns the given name in snake case.
 func (n *SnakeCase) Get(name string) string {
 	if len(name) == 0 {
 		return ""

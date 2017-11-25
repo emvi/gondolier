@@ -12,13 +12,13 @@ var (
 	metaModels = make([]MetaModel, 0)
 )
 
-// Interface used to migrate a database schema from model.
+// Migrator interface used to migrate a database schema from model.
 type Migrator interface {
 	Migrate([]MetaModel)
 	DropTable(string)
 }
 
-// Interface used to translate model names to schema names.
+// NameSchema interface used to translate model names to schema names.
 type NameSchema interface {
 	Get(string) string
 }
