@@ -37,6 +37,7 @@ func main() {
     db, _ := sql.Open("postgres", dbString())
     defer db.Close()
 
+    // migrate your schema
     gondolier.Use(db, &gondolier.Postgres{Schema: "public",
         DropColumns: true,
         Log:         true})
