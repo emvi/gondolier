@@ -4,8 +4,8 @@
 
 # Gondolier
 
-[![GoDoc](https://godoc.org/github.com/DeKugelschieber/gondolier?status.svg)](https://godoc.org/github.com/DeKugelschieber/gondolier)
-[![CircleCI](https://circleci.com/gh/DeKugelschieber/gondolier.svg?style=svg)](https://circleci.com/gh/DeKugelschieber/gondolier)
+[![GoDoc](https://godoc.org/github.com/emvicom/gondolier?status.svg)](https://godoc.org/github.com/emvicom/gondolier)
+[![CircleCI](https://circleci.com/gh/emvicom/gondolier.svg?style=svg)](https://circleci.com/gh/emvicom/gondolier)
 
 ## Description
 
