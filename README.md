@@ -63,7 +63,7 @@ func main() {
 ### Limits
 
 * no multi primary key support yet
-* there is no way Gondolier can check the data model is valid, so it might fail to execute the migration (with a panic)
+* there is no way Gondolier can check if the data model is valid, so it might fail to execute the migration (with a panic)
 
 ## Installation
 
@@ -76,7 +76,7 @@ go get github.com/emvicom/gondolier
 
 ## Usage
 
-Gondolier consists just out of a few methods. First, you setup Gondolier by passing the database connection and the migrator to *Use*:
+Gondolier consists only out of a few methods. First, you set up Gondolier by passing the database connection and the migrator to *Use*:
 
 ```
 gondolier.Use(dbconn, migrator)
@@ -126,7 +126,7 @@ Afterwards, call *Migrate* to start the migration:
 gondolier.Migrate()
 ```
 
-To drop a table that is no longer needed, call *Drop*. You can remove all attributes from the struct, just the name must match the old struct:
+To drop a table that is no longer needed, call *Drop*. You can remove all attributes from the struct, only the name must match the old struct:
 
 ```
 type DropMe struct {}
