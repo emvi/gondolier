@@ -1,6 +1,7 @@
 package gondolier
 
 import (
+	"database/sql"
 	"testing"
 )
 
@@ -66,6 +67,13 @@ type testUpdateColumnFk struct {
 
 type testUpdateColumnFkReduce struct {
 	Fk uint64 `gondolier:"type:bigint"`
+}
+
+type testNullableFields struct {
+	NullBool   sql.NullBool    `gondolier:"type:boolean"`
+	NullFloat  sql.NullFloat64 `gondolier:"type:real"`
+	NullInt    sql.NullInt64   `gondolier:"type:integer"`
+	NullString sql.NullString  `gondolier:"type:text"`
 }
 
 func TestPostgresCreateTable(t *testing.T) {
@@ -369,6 +377,16 @@ func TestPostgresDontDropPk(t *testing.T) {
 	Migrate()
 }
 
+func TestPostgresNullableFields(t *testing.T) {
+	testCleanDb()
+	t.Log("--- TestPostgresNullableFields ---")
+
+	postgres := &Postgres{Schema: "public", Log: true}
+	Use(testdb, postgres)
+	Model(testNullableFields{})
+	Migrate()
+}
+
 func testCleanDb() {
 	testdb.Exec(`DROP TABLE IF EXISTS "test_post"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_user"`)
@@ -383,4 +401,5 @@ func testCleanDb() {
 	testdb.Exec(`DROP TABLE IF EXISTS "test_update_column_fk"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_update_column_fk_reduce"`)
 	testdb.Exec(`DROP TABLE IF EXISTS "test_other"`)
+	testdb.Exec(`DROP TABLE IF EXISTS "test_nullable_fields"`)
 }

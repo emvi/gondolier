@@ -1,16 +1,18 @@
 package gondolier
 
 import (
+	"database/sql"
 	"testing"
 	"time"
 )
 
 type testModel struct {
-	Id    uint64    `gondolier:"type:integer;primarykey;notnull;;"` // accept multiple ;
-	Name  string    `gondolier:"type:varchar;unique"`
-	Age   int       `gondolier:"type:integer;notnull"`
-	Array []int     `gondolier:"type:integer[]"`
-	Date  time.Time `gondolier:"type:timestamp"`
+	Id            uint64         `gondolier:"type:integer;primarykey;notnull;;"` // accept multiple ;
+	Name          string         `gondolier:"type:varchar;unique"`
+	Age           int            `gondolier:"type:integer;notnull"`
+	Array         []int          `gondolier:"type:integer[]"`
+	Date          time.Time      `gondolier:"type:timestamp"`
+	NullableField sql.NullString `gondolier:"type:text"`
 }
 
 type testInvalidTypesModel struct {
@@ -58,7 +60,7 @@ func TestGetModelNameStructOnly(t *testing.T) {
 func TestGetModelFields(t *testing.T) {
 	fields := getModelFields(&testModel{})
 
-	if len(fields) != 5 {
+	if len(fields) != 6 {
 		t.Fatalf("All fields must be returned: %v", len(fields))
 	}
 
@@ -66,13 +68,14 @@ func TestGetModelFields(t *testing.T) {
 		fields[1].Name != "Name" ||
 		fields[2].Name != "Age" ||
 		fields[3].Name != "Array" ||
-		fields[4].Name != "Date" {
+		fields[4].Name != "Date" ||
+		fields[5].Name != "NullableField" {
 		t.Fatal("Field names must be correct")
 	}
 
 	fields = getModelFields(testModel{})
 
-	if len(fields) != 5 {
+	if len(fields) != 6 {
 		t.Fatalf("All fields must be returned: %v", len(fields))
 	}
 }

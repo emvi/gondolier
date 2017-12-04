@@ -9,6 +9,14 @@ const (
 	tagname = "gondolier"
 )
 
+var (
+	knownTypes = []string{"time.Time",
+		"sql.NullBool",
+		"sql.NullFloat64",
+		"sql.NullInt64",
+		"sql.NullString"}
+)
+
 // MetaModel is the description of a model for migration.
 type MetaModel struct {
 	ModelName string
@@ -71,7 +79,7 @@ func getModelFields(model interface{}) []MetaField {
 		}
 
 		if (kind == reflect.Struct || kind == reflect.Ptr || kind == reflect.Interface) &&
-			field.Type.String() != "time.Time" {
+			!isKnownType(field.Type.String()) {
 			panic("The type for field '" + field.Name + "' is invalid")
 		}
 
@@ -98,4 +106,14 @@ func parseTag(tag string) []MetaTag {
 	}
 
 	return tags
+}
+
+func isKnownType(typename string) bool {
+	for _, knownType := range knownTypes {
+		if typename == knownType {
+			return true
+		}
+	}
+
+	return false
 }
