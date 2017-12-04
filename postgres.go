@@ -35,6 +35,7 @@ type Postgres struct {
 	DropColumns bool
 	Log         bool
 
+	tx        *sql.Tx
 	createSeq []string
 	alterSeq  []string
 	createFK  []string
@@ -44,6 +45,21 @@ type Postgres struct {
 
 // Migrate migrates the given data model.
 func (m *Postgres) Migrate(metaModels []MetaModel) {
+	defer func() {
+		if r := recover(); r != nil {
+			m.tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	tx, err := db.Begin()
+
+	if err != nil {
+		panic(err)
+	}
+
+	m.tx = tx
+
 	// create or update table
 	for _, model := range metaModels {
 		m.migrate(&model)
@@ -51,12 +67,16 @@ func (m *Postgres) Migrate(metaModels []MetaModel) {
 
 	// create foreign keys
 	for _, fk := range m.createFK {
-		m.exec(fk)
+		m.exec(fk, true)
 	}
 
 	// drop foreign keys
 	for _, fk := range m.dropFK {
-		m.exec(fk)
+		m.exec(fk, true)
+	}
+
+	if err := tx.Commit(); err != nil {
+		panic(err)
 	}
 
 	// reset
@@ -67,7 +87,7 @@ func (m *Postgres) Migrate(metaModels []MetaModel) {
 // DropTable drops the given table.
 func (m *Postgres) DropTable(name string) {
 	name = naming.Get(name)
-	m.exec(`DROP TABLE IF EXISTS "` + name + `"`)
+	m.exec(`DROP TABLE IF EXISTS "`+name+`"`, false)
 }
 
 func (m *Postgres) migrate(model *MetaModel) {
@@ -259,20 +279,20 @@ func (m *Postgres) createTable(model *MetaModel) {
 
 	// create sequences if required
 	for _, seq := range m.createSeq {
-		m.exec(seq)
+		m.exec(seq, true)
 	}
 
 	// create table
-	m.exec(sql)
+	m.exec(sql, true)
 
 	// alter sequence if required
 	for _, seq := range m.alterSeq {
-		m.exec(seq)
+		m.exec(seq, true)
 	}
 
 	// alter primary key if required
 	if m.alterPK != "" {
-		m.exec(m.alterPK)
+		m.exec(m.alterPK, true)
 	}
 
 	// reset
@@ -291,7 +311,7 @@ func (m *Postgres) updateTable(model *MetaModel) {
 			tableName := naming.Get(model.ModelName)
 			columnName := naming.Get(field.Name)
 			query := `ALTER TABLE "` + tableName + `" ADD COLUMN "` + columnName + `" ` + m.getTags(tableName, &field)
-			m.exec(query)
+			m.exec(query, true)
 		}
 	}
 }
@@ -343,7 +363,7 @@ func (m *Postgres) updateColumnType(tableName, columnName, newtype string) {
 	if istype != newtype {
 		query := `ALTER TABLE "` + tableName + `" ALTER COLUMN "` + columnName + `"
 					TYPE ` + newtype
-		m.exec(query)
+		m.exec(query, true)
 	}
 }
 
@@ -356,7 +376,7 @@ func (m *Postgres) updateColumnNotNull(tableName, columnName string, notnull boo
 		query += " DROP NOT NULL"
 	}
 
-	m.exec(query)
+	m.exec(query, true)
 }
 
 func (m *Postgres) updateColumnDefault(tableName, columnName, value string, isId bool) {
@@ -366,8 +386,8 @@ func (m *Postgres) updateColumnDefault(tableName, columnName, value string, isId
 		// set default
 		if isId {
 			m.addSequence(tableName, columnName, "1,1,-,-,1")
-			m.exec(m.createSeq[0])
-			m.exec(m.alterSeq[0])
+			m.exec(m.createSeq[0], true)
+			m.exec(m.alterSeq[0], true)
 			m.createSeq = make([]string, 0)
 			m.alterSeq = make([]string, 0)
 			query = `ALTER TABLE "` + tableName + `" ALTER COLUMN "` + columnName + `" SET DEFAULT nextval('` + m.getSequenceName(tableName, columnName) + `'::regclass)`
@@ -383,16 +403,16 @@ func (m *Postgres) updateColumnDefault(tableName, columnName, value string, isId
 		query = `ALTER TABLE "` + tableName + `" ALTER COLUMN "` + columnName + `" DROP DEFAULT`
 	}
 
-	m.exec(query)
+	m.exec(query, true)
 }
 
 func (m *Postgres) updateColumnPK(tableName, columnName string, pk bool) {
 	pkName := m.getPrimaryKeyName(tableName, columnName)
 
 	if !pk && m.constraintExists(pkName) {
-		m.exec(`ALTER TABLE "` + tableName + `" DROP CONSTRAINT IF EXISTS "` + pkName + `"`)
+		m.exec(`ALTER TABLE "`+tableName+`" DROP CONSTRAINT IF EXISTS "`+pkName+`"`, true)
 	} else if pk && !m.constraintExists(pkName) {
-		m.exec(`ALTER TABLE "` + tableName + `" ADD PRIMARY KEY ("` + columnName + `")`)
+		m.exec(`ALTER TABLE "`+tableName+`" ADD PRIMARY KEY ("`+columnName+`")`, true)
 	}
 }
 
@@ -406,7 +426,7 @@ func (m *Postgres) updateColumnUnique(tableName, columnName string, unique bool)
 		query = `ALTER TABLE "` + tableName + `" DROP CONSTRAINT IF EXISTS "` + constraintName + `"`
 	}
 
-	m.exec(query)
+	m.exec(query, true)
 }
 
 func (m *Postgres) updateColumnSeq(tableName, columnName, seq string, isId bool) {
@@ -419,14 +439,14 @@ func (m *Postgres) updateColumnSeq(tableName, columnName, seq string, isId bool)
 	if seq != "" && !m.sequenceExists(seqName) {
 		// create sequence
 		m.addSequence(tableName, columnName, seq)
-		m.exec(m.createSeq[0])
-		m.exec(m.alterSeq[0])
+		m.exec(m.createSeq[0], true)
+		m.exec(m.alterSeq[0], true)
 		m.createSeq = make([]string, 0)
 		m.alterSeq = make([]string, 0)
 	} else if seq == "" && m.sequenceExists(seqName) {
 		// drop sequence
 		query := `DROP SEQUENCE IF EXISTS "` + seqName + `" CASCADE`
-		m.exec(query)
+		m.exec(query, true)
 	}
 }
 
@@ -458,7 +478,7 @@ func (m *Postgres) dropColumns(model *MetaModel) {
 		if !m.fieldsContainsColumn(model.Fields, column) {
 			query := `ALTER TABLE "` + tableName + `"
 				DROP COLUMN IF EXISTS "` + column + `"`
-			m.exec(query)
+			m.exec(query, true)
 		}
 	}
 }
@@ -633,12 +653,18 @@ func (m *Postgres) getUniqueName(modelName, columnName string) string {
 	return modelName + "_" + columnName + "_key"
 }
 
-func (m *Postgres) exec(query string) {
+func (m *Postgres) exec(query string, tx bool) {
 	if m.Log {
 		log.Println(query)
 	}
 
-	if _, err := db.Exec(query); err != nil {
-		panic(err)
+	if tx {
+		if _, err := m.tx.Exec(query); err != nil {
+			panic(err)
+		}
+	} else {
+		if _, err := db.Exec(query); err != nil {
+			panic(err)
+		}
 	}
 }
