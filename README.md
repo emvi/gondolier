@@ -52,8 +52,7 @@ func main() {
 
 ### Features
 
-* create the initial schema just from your data model defined in Go
-* update the schema just from your data model defined in Go
+* create and update your database schema just from your data model defined in Go
 * drop columns when they're no longer needed (removed in struct)
 * drop tables by passing a struct (which can be empty)
 
@@ -105,7 +104,7 @@ Now call *Model* and pass the models which define your database schema:
 gondolier.Model(MyModel{}, &AnotherModel{})
 ```
 
-*Model* accepts objects and pointers. The models must define a decorator with meta information. For defails take a look at the Postgres Migrator or the example implementation. Here is a short example:
+*Model* accepts objects and pointers. The models must define a decorator with meta information. For more details take a look at the Postgres Migrator or the example implementation. Here is a short example:
 
 ```
 type MyModel struct {
