@@ -23,6 +23,11 @@ type testInvalidTypesModel struct {
 	UnknownInterface interface{}           `gondolier:"type:interface"`
 }
 
+type testModelWhitespace struct {
+	Id   uint64 `  gondolier:" type:  bigint ;;; pk;;; notnull ; ; "   `
+	Name string `gondolier:"	  type  :   character varying(100) ;; 	 "   `
+}
+
 func TestBuildMetaModel(t *testing.T) {
 	meta := buildMetaModel(&testModel{})
 
@@ -91,5 +96,43 @@ func TestParseTag(t *testing.T) {
 		tags[1].Name != "" || tags[1].Value != "primarykey" ||
 		tags[2].Name != "" || tags[2].Value != "notnull" {
 		t.Fatal("Tag elements must be correct")
+	}
+}
+
+func TestModelWhitespace(t *testing.T) {
+	meta := buildMetaModel(testModelWhitespace{})
+
+	if meta.ModelName != "testModelWhitespace" {
+		t.Fatal("Name must be testModelWhitespace")
+	}
+
+	if len(meta.Fields) != 2 {
+		t.Fatalf("Model must have two fields, but was: %v", len(meta.Fields))
+	}
+
+	fields := meta.Fields
+
+	if fields[0].Name != "Id" || fields[1].Name != "Name" {
+		t.Fatal("Model fields must have propper names")
+	}
+
+	if len(fields[0].Tags) != 3 || len(fields[1].Tags) != 1 {
+		t.Fatalf("Model fields must have propper tags: %v %v", len(fields[0].Tags), len(fields[1].Tags))
+	}
+
+	if fields[0].Tags[0].Name != "type" || fields[0].Tags[0].Value != "bigint" {
+		t.Fatalf("First field must have type bigint: %v %v", fields[0].Tags[0].Name, fields[0].Tags[0].Value)
+	}
+
+	if fields[0].Tags[1].Name != "" || fields[0].Tags[1].Value != "pk" {
+		t.Fatal("Second field must have value pk")
+	}
+
+	if fields[0].Tags[2].Name != "" || fields[0].Tags[2].Value != "notnull" {
+		t.Fatal("Third field must have value notnull")
+	}
+
+	if fields[1].Tags[0].Name != "type" || fields[1].Tags[0].Value != "character varying(100)" {
+		t.Fatalf("First field must have type character varying(100): %v %v", fields[1].Tags[0].Name, fields[1].Tags[0].Value)
 	}
 }

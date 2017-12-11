@@ -94,12 +94,18 @@ func parseTag(tag string) []MetaTag {
 	elements := strings.Split(tag, ";")
 
 	for _, e := range elements {
+		e = strings.TrimSpace(e)
+
+		if e == "" {
+			continue
+		}
+
 		nv := strings.Split(e, ":")
 
 		if len(nv) == 1 {
-			tags = append(tags, MetaTag{"", nv[0]})
+			tags = append(tags, MetaTag{"", strings.TrimSpace(nv[0])})
 		} else if len(nv) == 2 {
-			tags = append(tags, MetaTag{nv[0], nv[1]})
+			tags = append(tags, MetaTag{strings.TrimSpace(nv[0]), strings.TrimSpace(nv[1])})
 		} else {
 			panic("Too many or too few meta field tag separators")
 		}
