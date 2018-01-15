@@ -12,7 +12,7 @@ var (
 	metaModels = make([]MetaModel, 0)
 )
 
-// Migrator interface used to migrate a database schema from model.
+// Migrator interface used to migrate a database schema for a specific database.
 type Migrator interface {
 	Migrate([]MetaModel)
 	DropTable(string)
@@ -23,13 +23,13 @@ type NameSchema interface {
 	Get(string) string
 }
 
-// Use sets the database connection and migrator used for migration.
+// Use sets the database connection and migrator.
 func Use(conn *sql.DB, m Migrator) {
 	db = conn
 	migrator = m
 }
 
-// Naming sets the naming used for migration. Default is snake case.
+// Naming sets the naming pattern used for migration. Default is snake case.
 //
 // Example:
 //  Naming(SnakeCase)
@@ -41,9 +41,9 @@ func Naming(schema NameSchema) {
 	naming = schema
 }
 
-// Model adds one or more models for migration.
-// Can be passed as references to a structs or the structs directly or mixed.
-// This function might panic if an invalid model is passed.
+// Model adds one or more objects for migration.
+// The objects can be passed as references, values or mixed.
+// This function might panic if an invalid model is used.
 //
 // Example:
 //  Model(&MyModel{}, AnotherModel{})
@@ -56,7 +56,7 @@ func Model(models ...interface{}) {
 }
 
 // Migrate migrates models added previously using Model().
-// The database connection and migrator must be set.
+// The database connection and migrator must be set before by calling Use().
 //
 // Example:
 //  Use(Postgres)
@@ -68,10 +68,10 @@ func Migrate() {
 	reset()
 }
 
-// Drop drops tables for given models if exists.
-// The database connection and migrator must be set.
-// Can be passed as references to a structs or the structs directly or mixed.
-// This function might panic if an invalid model is passed or the tables cannot be dropped.
+// Drop drops tables for given objects if they exist.
+// The database connection and migrator must be set before by calling Use().
+// The objects can be passed as references, values or mixed.
+// This function might panic if an invalid model is used or the tables cannot be dropped.
 //
 // Example:
 //  Drop(&MyModel{}, AnotherModel{})
