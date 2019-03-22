@@ -519,13 +519,7 @@ func (m *Postgres) buildTag(tags []string, modelName, key, value string, field *
 	if key == "type" {
 		tags[0] = tag.Value
 	} else if key == "default" {
-		tags[1] = "DEFAULT "
-
-		if value == "nextval(seq)" {
-			tags[1] += "nextval('" + m.getSequenceName(modelName, field.Name) + "'::regclass)"
-		} else {
-			tags[1] += value
-		}
+		tags[1] = m.buildDefaultTag(modelName, value, field.Name)
 	} else if value == "notnull" || value == "not null" {
 		tags[2] = "NOT NULL"
 	} else if value == "null" {
@@ -534,10 +528,7 @@ func (m *Postgres) buildTag(tags []string, modelName, key, value string, field *
 		m.addSequence(modelName, field.Name, value)
 	} else if value == "id" {
 		// id is a shortcut for seq + default + pk
-		m.addSequence(modelName, field.Name, "1,1,-,-,1")
-		tags[1] = "DEFAULT nextval('" + m.getSequenceName(modelName, field.Name) + "'::regclass)"
-		tags[3] = "PRIMARY KEY"
-		m.alterPrimaryKey(modelName, field.Name)
+		tags[1], tags[3] = m.buildIdTag(modelName, field.Name)
 	} else if value == "pk" || value == "primary key" {
 		tags[3] = "PRIMARY KEY"
 		m.alterPrimaryKey(modelName, field.Name)
@@ -547,16 +538,40 @@ func (m *Postgres) buildTag(tags []string, modelName, key, value string, field *
 		// value must be case sensitive here
 		m.addForeignKey(modelName, field.Name, tag.Value)
 	} else {
-		name := ""
-
-		if key == "" {
-			name = value
-		} else {
-			name = key + ":" + value
-		}
-
-		panic("Unknown tag '" + name + "' for model '" + modelName + "'")
+		m.panicUnknownTag(modelName, key, value)
 	}
+}
+
+func (m *Postgres) buildDefaultTag(modelName, value, fieldName string) string {
+	query := "DEFAULT "
+
+	if value == "nextval(seq)" {
+		query += "nextval('" + m.getSequenceName(modelName, fieldName) + "'::regclass)"
+	} else {
+		query += value
+	}
+
+	return query
+}
+
+func (m *Postgres) buildIdTag(modelName, fieldName string) (string, string) {
+	m.addSequence(modelName, fieldName, "1,1,-,-,1")
+	tag1 := "DEFAULT nextval('" + m.getSequenceName(modelName, fieldName) + "'::regclass)"
+	tag3 := "PRIMARY KEY"
+	m.alterPrimaryKey(modelName, fieldName)
+	return tag1, tag3
+}
+
+func (m *Postgres) panicUnknownTag(modelName, key, value string) {
+	name := ""
+
+	if key == "" {
+		name = value
+	} else {
+		name = key + ":" + value
+	}
+
+	panic("Unknown tag '" + name + "' for model '" + modelName + "'")
 }
 
 func (m *Postgres) addSequence(modelName, columnName, info string) {
