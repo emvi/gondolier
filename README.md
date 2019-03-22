@@ -4,9 +4,9 @@
 
 # Gondolier
 
-[![GoDoc](https://godoc.org/github.com/emvicom/gondolier?status.svg)](https://godoc.org/github.com/emvicom/gondolier)
-[![CircleCI](https://circleci.com/gh/emvicom/gondolier.svg?style=svg)](https://circleci.com/gh/emvicom/gondolier)
-[![Go Report Card](https://goreportcard.com/badge/github.com/emvicom/gondolier)](https://goreportcard.com/report/github.com/emvicom/gondolier)
+[![GoDoc](https://godoc.org/github.com/emvi/gondolier?status.svg)](https://godoc.org/github.com/emvi/gondolier)
+[![CircleCI](https://circleci.com/gh/emvi/gondolier.svg?style=svg)](https://circleci.com/gh/emvi/gondolier)
+[![Go Report Card](https://goreportcard.com/badge/github.com/emvi/gondolier)](https://goreportcard.com/report/github.com/emvi/gondolier)
 
 ## Description
 
@@ -48,7 +48,7 @@ func main() {
 }
 ```
 
-[View the full demo](https://github.com/emvicom/gondolier-example)
+[View the full demo](https://github.com/emvi/gondolier-example)
 
 ### Features
 
@@ -71,7 +71,7 @@ To install Gondolier, go get all dependencies and Gondolier:
 
 ```
 go get github.com/lib/pq # for Postgres
-go get github.com/emvicom/gondolier
+go get github.com/emvi/gondolier
 ```
 
 ## Usage
