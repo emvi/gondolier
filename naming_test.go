@@ -5,20 +5,22 @@ import (
 )
 
 func TestToSnakeCase(t *testing.T) {
-	names := [][]string{[]string{"", ""},
-		[]string{"a", "a"},
-		[]string{"myModelName", "my_model_name"},
-		[]string{"APISnakeNAME", "api_snake_name"},
-		[]string{"First", "first"},
-		[]string{"SNake", "s_nake"},
-		[]string{"with_underscore", "with_underscore"},
-		[]string{"snake_Id", "snake_id"},
-		[]string{"snake_ID", "snake_id"},
-		[]string{"snakeID", "snake_id"},
-		[]string{"myLITTLEPony", "my_little_pony"},
-		[]string{"MYSnake_case", "my_snake_case"},
-		[]string{"WOOFWoof", "woof_woof"},
-		[]string{"Space to underscore", "space_to_underscore"}}
+	names := [][]string{
+		{"", ""},
+		{"a", "a"},
+		{"myModelName", "my_model_name"},
+		{"APISnakeNAME", "api_snake_name"},
+		{"First", "first"},
+		{"SNake", "s_nake"},
+		{"with_underscore", "with_underscore"},
+		{"snake_Id", "snake_id"},
+		{"snake_ID", "snake_id"},
+		{"snakeID", "snake_id"},
+		{"myLITTLEPony", "my_little_pony"},
+		{"MYSnake_case", "my_snake_case"},
+		{"WOOFWoof", "woof_woof"},
+		{"Space to underscore", "space_to_underscore"},
+	}
 	namesake := SnakeCase{}
 
 	for _, name := range names {

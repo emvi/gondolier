@@ -15,14 +15,6 @@ type testModel struct {
 	NullableField sql.NullString `gondolier:"type:text"`
 }
 
-type testInvalidTypesModel struct {
-	Ignored          bool `gondolier:"-"`
-	IgnoredToo       bool
-	Unknown          struct{ Name string } `gondolier:"type:struct"`
-	UnknownToo       *int                  `gondolier:"type:integer"`
-	UnknownInterface interface{}           `gondolier:"type:interface"`
-}
-
 type testModelWhitespace struct {
 	Id   uint64 `  gondolier:" type:  bigint ;;; pk;;; notnull ; ; "   `
 	Name string `gondolier:"	  type  :   character varying(100) ;; 	 "   `
@@ -113,11 +105,11 @@ func TestModelWhitespace(t *testing.T) {
 	fields := meta.Fields
 
 	if fields[0].Name != "Id" || fields[1].Name != "Name" {
-		t.Fatal("Model fields must have propper names")
+		t.Fatal("Model fields must have proper names")
 	}
 
 	if len(fields[0].Tags) != 3 || len(fields[1].Tags) != 1 {
-		t.Fatalf("Model fields must have propper tags: %v %v", len(fields[0].Tags), len(fields[1].Tags))
+		t.Fatalf("Model fields must have proper tags: %v %v", len(fields[0].Tags), len(fields[1].Tags))
 	}
 
 	if fields[0].Tags[0].Name != "type" || fields[0].Tags[0].Value != "bigint" {
