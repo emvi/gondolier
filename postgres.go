@@ -509,51 +509,54 @@ func (m *Postgres) getTags(modelName string, field *MetaField) string {
 	for _, tag := range field.Tags {
 		key := strings.ToLower(tag.Name)
 		value := strings.ToLower(tag.Value)
-
-		if key == "type" {
-			tags[0] = tag.Value
-		} else if key == "default" {
-			tags[1] = "DEFAULT "
-
-			if value == "nextval(seq)" {
-				tags[1] += "nextval('" + m.getSequenceName(modelName, field.Name) + "'::regclass)"
-			} else {
-				tags[1] += value
-			}
-		} else if value == "notnull" || value == "not null" {
-			tags[2] = "NOT NULL"
-		} else if value == "null" {
-			tags[2] = "NULL"
-		} else if key == "seq" || key == "sequence" {
-			m.addSequence(modelName, field.Name, value)
-		} else if value == "id" {
-			// id is a shortcut for seq + default + pk
-			m.addSequence(modelName, field.Name, "1,1,-,-,1")
-			tags[1] = "DEFAULT nextval('" + m.getSequenceName(modelName, field.Name) + "'::regclass)"
-			tags[3] = "PRIMARY KEY"
-			m.alterPrimaryKey(modelName, field.Name)
-		} else if value == "pk" || value == "primary key" {
-			tags[3] = "PRIMARY KEY"
-			m.alterPrimaryKey(modelName, field.Name)
-		} else if value == "unique" {
-			tags[4] = "UNIQUE"
-		} else if key == "fk" || key == "foreign key" {
-			// value must be case sensitive here
-			m.addForeignKey(modelName, field.Name, tag.Value)
-		} else {
-			name := ""
-
-			if key == "" {
-				name = value
-			} else {
-				name = key + ":" + value
-			}
-
-			panic("Unknown tag '" + name + "' for model '" + modelName + "'")
-		}
+		m.buildTag(tags, modelName, key, value, field, tag)
 	}
 
 	return strings.Join(tags, " ")
+}
+
+func (m *Postgres) buildTag(tags []string, modelName, key, value string, field *MetaField, tag MetaTag) {
+	if key == "type" {
+		tags[0] = tag.Value
+	} else if key == "default" {
+		tags[1] = "DEFAULT "
+
+		if value == "nextval(seq)" {
+			tags[1] += "nextval('" + m.getSequenceName(modelName, field.Name) + "'::regclass)"
+		} else {
+			tags[1] += value
+		}
+	} else if value == "notnull" || value == "not null" {
+		tags[2] = "NOT NULL"
+	} else if value == "null" {
+		tags[2] = "NULL"
+	} else if key == "seq" || key == "sequence" {
+		m.addSequence(modelName, field.Name, value)
+	} else if value == "id" {
+		// id is a shortcut for seq + default + pk
+		m.addSequence(modelName, field.Name, "1,1,-,-,1")
+		tags[1] = "DEFAULT nextval('" + m.getSequenceName(modelName, field.Name) + "'::regclass)"
+		tags[3] = "PRIMARY KEY"
+		m.alterPrimaryKey(modelName, field.Name)
+	} else if value == "pk" || value == "primary key" {
+		tags[3] = "PRIMARY KEY"
+		m.alterPrimaryKey(modelName, field.Name)
+	} else if value == "unique" {
+		tags[4] = "UNIQUE"
+	} else if key == "fk" || key == "foreign key" {
+		// value must be case sensitive here
+		m.addForeignKey(modelName, field.Name, tag.Value)
+	} else {
+		name := ""
+
+		if key == "" {
+			name = value
+		} else {
+			name = key + ":" + value
+		}
+
+		panic("Unknown tag '" + name + "' for model '" + modelName + "'")
+	}
 }
 
 func (m *Postgres) addSequence(modelName, columnName, info string) {
